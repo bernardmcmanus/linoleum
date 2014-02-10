@@ -27,8 +27,8 @@
 
 		distribute: function( selector , options , callback ) {
 
-			 if (!this._setView( 'distribute' ))
-			 	return;
+			if (!this._setView( 'distribute' ))
+				return;
 
 			if (this.length < 1)
 				return;
