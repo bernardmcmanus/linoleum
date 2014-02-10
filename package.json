@@ -1,0 +1,17 @@
+{
+    "name": "linoleum.js",
+    "description": "Tiles for the 99%.",
+    "version": "0.1.0",
+    "author": "Bernard McManus",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/elnarddogg/linoleum.git"
+    },
+    "devDependencies": {
+        "grunt": "~0.4.2",
+        "grunt-contrib-jshint": "~0.6.3",
+        "grunt-contrib-uglify": ">=0.2.2",
+        "grunt-git-describe": "~2.0.2",
+        "grunt-contrib-clean": ">=0.4.1"
+    }
+}

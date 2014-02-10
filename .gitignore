@@ -1,3 +1,9 @@
+# includes
+index.html
+js/custom.js
+js/hx-v*
+js/jquery-*
+
 # npm & grunt #
 ###############
 node_modules
