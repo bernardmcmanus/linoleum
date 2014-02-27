@@ -7,8 +7,9 @@
 
 		options = $.extend({
 			dims: getDims( element ),
-			perspective: 1000,
-			thickness: 0.01,
+			perspective: 10000,
+			thickness: 0.001,
+			modalZ: 0.5,
 			view: 'home',
 			home: {}
 		}, (options || {}));
@@ -46,15 +47,17 @@
 
 			callback = callback || function() {};
 
-			var xform = setView.call( this , view , options );
+			var viewInfo = setView.call( this , view , options );
+			viewInfo.callback = viewInfo.callback || function() {};
 
 			$(this)
-			.hx( 'transform' , xform.booty );
+			.hx( 'transform' , viewInfo.xform.tile );
 			
 			$(this).find( '.inner' )
-			.hx( 'transform' , xform.inner )
+			.hx( 'transform' , viewInfo.xform.inner )
 			.done(function() {
 				this.view = view;
+				viewInfo.callback.call( this );
 				callback.call( this );
 			}.bind( this ));
 		},
@@ -109,12 +112,14 @@
 
 		options = options || {};
 
-		var xform = views[view].call( this );
+		var viewInfo = views[view].call( this , options );
 
-		xform.booty = $.extend( xform.booty , options );
-		xform.inner = $.extend( xform.inner , options );
+		delete options.modalZ;
 
-		return xform;
+		viewInfo.xform.tile = $.extend( viewInfo.xform.tile , options );
+		viewInfo.xform.inner = $.extend( viewInfo.xform.inner , options );
+
+		return viewInfo;
 	}
 
 
@@ -128,27 +133,29 @@
 		center.x = (containerDims.width / 2) - (this.dims.width / 2);
 		center.y = ((window.innerHeight / 2) - containerDims.top) - (this.dims.height / 2);
 
+		if ($(window).scrollTop() < containerDims.top)
+			center.y += (containerDims.top - $(window).scrollTop());
+
+		console.log(center);
+
 		return center;
 	}
 
 
-	function getModalZ( parent ) {
-
-		var containerDims = parent.getBoundingClientRect();
-		var containerTop = parseInt(getComputedStyle( parent ).top , 10 );
-
-		var d1 = (window.innerWidth - containerDims.width);
-		var d2 = (window.innerHeight - (containerTop * 2));
-
-		return (this.perspective - (d1 > d2 ? d1 : d2));
+	function getModalZ( modalZ ) {
+		return this.perspective * (modalZ || this.modalZ);
 	}
 
 
 	var views = {};
 
-	views.home = function() {
+	views.home = function( options ) {
 
-		var booty = {
+		function callback() {
+			this._deactivate();
+		}
+
+		var tile = {
 			translate: this.home,
 			relative: false
 		};
@@ -157,21 +164,22 @@
 			relative: false
 		};
 
-		this._deactivate();
-
 		return {
-			booty: booty,
-			inner: inner
+			callback: callback,
+			xform: {
+				tile: tile,
+				inner: inner
+			}
 		};
 	};
 
-	views.modal = function() {
+	views.modal = function( options ) {
 
 		var dims = this.parentNode.getBoundingClientRect();
 		var t = getContainerCenter.call( this , dims );
-		var z = getModalZ.call( this , this.parentNode );
+		var z = getModalZ.call( this , options.modalZ );
 		
-		booty = {
+		tile = {
 			translate: t,
 			relative: false
 		};
@@ -187,8 +195,10 @@
 		this._activate();
 
 		return {
-			booty: booty,
-			inner: inner
+			xform: {
+				tile: tile,
+				inner: inner
+			}
 		};
 	};
 

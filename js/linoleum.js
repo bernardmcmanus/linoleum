@@ -1,13 +1,16 @@
 (function() {
 
 	var config = {
-		margin: 20,
-		delay: 200,
+		margin: {
+			x: 20,
+			y: 20
+		},
+		distroDelay: 200,
 		duration: 300,
 		easing: 'easeOutBack'
 	};
 
-	window.linoleum = function( selector ) {
+	window.linoleum = function( selector , options ) {
 
 		var els = document.querySelectorAll( selector );
 
@@ -19,6 +22,8 @@
 		Array.prototype.forEach.call( els , function( i ) {
 			tiles.push(new linoleum.tile( i ));
 		});
+
+		this.options = $.extend( true , config , ( options || {} ));
 
 		return $.extend( tiles , this );
 	};
@@ -42,9 +47,9 @@
 				throw 'Error: You must pass a valid selector to linoleum.distribute.';
 
 			options = $.extend({
-				margin: config.margin,
-				duration: config.duration,
-				easing: config.easing
+				margin: this.options.margin,
+				duration: this.options.duration,
+				easing: this.options.easing
 			}, (options || {}));
 
 			this.Columns = _distribute.call( this , parent , options , callback );
@@ -60,6 +65,11 @@
 			index = (index >= this.length ? (this.length - 1) : (index < 0 ? 0 : index)) || 0;
 
 			options = options || {};
+
+			options = $.extend({
+				duration: this.options.duration,
+				easing: this.options.easing
+			}, (options || {}));
 
 			_stack.call( this , index , options , callback );
 		},
@@ -154,24 +164,32 @@
 
 		callback = callback || function() {};
 		var containerDims = parent.getBoundingClientRect();
-		var completed = [];
+		var Columns = 0;
+		var Rows = 0;
+		var completed = 0;
 
 		function position( tile , row , col ) {
 
+			var ox = getCenterOffsetX.call( this , tile , Columns , options );
+
 			var t = {
-				x: (col * tile.dims.width) + (options.margin * (col + 1)),
-				y: (row * tile.dims.height) + (options.margin * (row + 1))
+				x: (col * tile.dims.width) + (options.margin.x * (col + 1)) + ox,
+				y: (row * tile.dims.height) + (options.margin.y * (row + 1))
 			};
 
 			tile.setHome( t );
 			
 			$(tile).hx( 'transform' , {
 				translate: t,
+				easing: options.easing,
+				duration: options.duration,
 				relative: false
 			});
 
 			$(tile).find( '.inner' )
 			.hx( 'transform' , {
+				duration: options.duration,
+				easing: options.easing,
 				relative: false
 			})
 			.done(checkComplete.bind( this ));
@@ -183,16 +201,16 @@
 		}
 
 		function checkComplete() {
-			completed.push( 1 );
-			if (completed.length === this.length)
+			completed++;
+			if (completed === this.length)
 				callback.call( this );
 		}
 
 		function exec() {
 
 			var totalX = getTotalX.call( this , options );
-			var Columns = getCols.call( this , totalX , containerDims );
-			var Rows = getRows.call( this , Columns );
+			Columns = getCols.call( this , totalX , containerDims );
+			Rows = getRows.call( this , Columns );
 
 			sizeSizer.call( this , Rows );
 
@@ -206,20 +224,23 @@
 					i++;
 				}
 			}
-
-			return Columns;
 		}
 
-		return exec.call( this );
+		exec.call( this );
+		return Columns;
 	}
 
+	function getCenterOffsetX( tile , cols , options ) {
+		var parentDims = tile.parentNode.getBoundingClientRect();
+		return (parentDims.width - (tile.dims.width * cols) - (options.margin.x * (cols + 1))) - (options.margin.x * Math.floor((cols) / 2));
+	}
 
 	function getTotalX( options ) {
-		return (this[0].dims.width * this.length) + (options.margin * (this.length + 1));
+		return (this[0].dims.width * this.length) + (options.margin.x * (this.length + 1));
 	}
 
 	function getTotalY( rows , options ) {
-		return (this[0].dims.height * rows) + (options.margin * (rows + 1));
+		return (this[0].dims.height * rows) + (options.margin.y * (rows + 1));
 	}
 
 	function getInstanceX( totalX ) {
@@ -257,18 +278,18 @@
 		var parent = this[0].parentNode;
 		var dims = parent.getBoundingClientRect();
 		
-		var totalX = getTotalX.call( this , config );
+		var totalX = getTotalX.call( this , this.options );
 		var cols = getCols.call( this , totalX , dims );
 		
-		if (this.Columns === cols)
-			return;
+		/*if (this.Columns === cols)
+			return;*/
 
 		var timeout = setTimeout(function() {
-			this.Columns = _distribute.call( this , parent , config );
-		}.bind( this ) , config.delay );
+			this.Columns = _distribute.call( this , parent , this.options );
+		}.bind( this ) , this.options.distroDelay );
 
-		$(window).on( 'resize' , function timer() {
-			$(window).off( 'resize' , timer );
+		$(window).on( 'resize orientationchange' , function timer() {
+			$(window).off( 'resize orientationchange' , timer );
 			clearTimeout( timeout );
 		});
 
