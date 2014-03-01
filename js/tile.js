@@ -7,12 +7,9 @@
 
 		options = $.extend({
 			dims: getDims( element ),
-			perspective: 10000,
-			thickness: 0.001,
-			modalZ: 0.5,
 			view: 'home',
 			home: {}
-		}, (options || {}));
+		} , options );
 
 		$.extend( this , options );
 
@@ -177,12 +174,12 @@
 		var t = getContainerCenter.call( this , dims );
 		var z = getModalZ.call( this , options.modalZ );
 		
-		tile = {
+		var tile = {
 			translate: t,
 			relative: false
 		};
 
-		inner = {
+		var inner = {
 			translate: {
 				z: z
 			},

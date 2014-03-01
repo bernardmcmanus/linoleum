@@ -1,13 +1,17 @@
 (function() {
 
-	/*$(window).on( 'scroll' , function() {
-		console.log($(this).scrollTop());
-	});*/
-
 	var cool = new linoleum( '.tile' , {
-		margin: {x: 40},
+		margin: {
+			left: 20,
+			right: 20,
+			top: 10,
+			bottom: 120
+		},
 		duration: 500,
-		//easing: 'easeOutBack'
+		easing: 'easeOutBack',
+		tile: {
+			modalZ: 0.6
+		}
 	});
 
 	cool.distribute( '#container' );
@@ -19,7 +23,17 @@
 	});
 
 	$('#stack').on( 'click' , function() {
-		cool.stack( 0 , {} , function() {
+
+		var position = {
+			x: 20,
+			y: 0
+		};
+
+		var options = {
+			easing: 'easeOutExpo'
+		};
+
+		cool.stack( position , options , function() {
 			console.log('stacked.');
 		});
 	});
@@ -33,10 +47,13 @@
 		};
 		
 		if (this.view === 'home') {
+
 			this.setView( 'modal' , options , function() {
 				console.log('modal.');
 			});
-		} else {
+		}
+		else {
+
 			this.setView( 'home' , options , function() {
 				console.log('home.');
 			});

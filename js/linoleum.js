@@ -2,12 +2,23 @@
 
 	var config = {
 		margin: {
-			x: 20,
-			y: 20
+			left: 10,
+			right: 10,
+			top: 10,
+			bottom: 10
+		},
+		stackPosition: {
+			x: 0,
+			y: 0
 		},
 		distroDelay: 200,
 		duration: 300,
-		easing: 'ease'
+		easing: 'ease',
+		tile: {
+			perspective: 10000,
+			thickness: 0.001,
+			modalZ: 0.5
+		}
 	};
 
 	window.linoleum = function( selector , options ) {
@@ -17,13 +28,13 @@
 		if (els.length < 1)
 			throw 'Error: You must pass a valid selector to the linoleum constructor.';
 
+		this.options = $.extend( true , config , ( options || {} ));
+
 		var tiles = [];
 
 		Array.prototype.forEach.call( els , function( i ) {
-			tiles.push(new linoleum.tile( i ));
-		});
-
-		this.options = $.extend( true , config , ( options || {} ));
+			tiles.push(new linoleum.tile( i , this.options.tile ));
+		}.bind( this ));
 
 		return $.extend( tiles , this );
 	};
@@ -55,23 +66,38 @@
 			this.Columns = _distribute.call( this , parent , options , callback );
 		},
 
-		stack: function( index , options , callback ) {
+		stack: function( position , options , callback ) {
 
-			if (!this._setView( 'stack' ))
+			if (!this._setView( 'stack' )) {
 				return;
+			}
 
-			callback = callback || function() {};
-
-			index = (index >= this.length ? (this.length - 1) : (index < 0 ? 0 : index)) || 0;
-
-			options = options || {};
+			position = $.extend( config.stackPosition , (position || {}));
 
 			options = $.extend({
 				duration: this.options.duration,
 				easing: this.options.easing
 			}, (options || {}));
 
-			_stack.call( this , index , options , callback );
+			callback = callback || function() {};
+
+			var t = null;
+
+			for (var i = 0; i < this.length; i++) {
+				if (this[i].view !== 'home') {
+					t = i;
+					break;
+				}
+			}
+
+			if (t !== null) {
+				this[t].setView( 'home' , options , function() {
+					_stack.call( this , position , options , callback );
+				}.bind( this ));
+			}
+			else {
+				_stack.call( this , position , options , callback );
+			}
 		},
 
 		_setView: function ( view ) {
@@ -125,10 +151,10 @@
 	};
 
 
-	function _stack( index , options , callback ) {
+	function _stack( translate , options , callback ) {
 
 		var xformTile = $.extend({
-			translate: this[index].home,
+			translate: translate,
 			relative: false
 		}, options );
 
@@ -137,7 +163,7 @@
 			relative: false
 		}, options );
 
-		var completed = [];
+		var completed = 0;
 
 		function position( tile ) {
 			$(tile).hx( 'transform' , xformTile );
@@ -147,8 +173,8 @@
 		}
 
 		function checkComplete() {
-			completed.push( 1 );
-			if (completed.length === this.length)
+			completed++;
+			if (completed === this.length)
 				callback.call( this );
 		}
 
@@ -170,11 +196,11 @@
 
 		function position( tile , row , col ) {
 
-			var ox = getCenterOffsetX.call( this , tile , Columns , options );
+			var ox = getCenterOffsetX( tile , Columns , options );
 
 			var t = {
-				x: (col * tile.dims.width) + (options.margin.x * (col + 1)) + ox,
-				y: (row * tile.dims.height) + (options.margin.y * (row + 1))
+				x: (col * tile.dims.width) + (options.margin.left * (col + 1)) + (options.margin.right * (col + 1)) + ox,
+				y: (row * tile.dims.height) + (options.margin.bottom * row) + (options.margin.top * (row + 1))
 			};
 
 			tile.setHome( t );
@@ -232,15 +258,18 @@
 
 	function getCenterOffsetX( tile , cols , options ) {
 		var parentDims = tile.parentNode.getBoundingClientRect();
-		return (parentDims.width - (tile.dims.width * cols) - (options.margin.x * (cols + 1))) - (options.margin.x * Math.floor((cols) / 2));
+		var marginX = options.margin.left + options.margin.right;
+		return (parentDims.width - (tile.dims.width * cols) - (marginX * (cols + 1))) / 2;
 	}
 
 	function getTotalX( options ) {
-		return (this[0].dims.width * this.length) + (options.margin.x * (this.length + 1));
+		var marginX = options.margin.left + options.margin.right;
+		return (this[0].dims.width * this.length) + (marginX * (this.length + 1));
 	}
 
 	function getTotalY( rows , options ) {
-		return (this[0].dims.height * rows) + (options.margin.y * (rows + 1));
+		var marginY = options.margin.top + options.margin.bottom;
+		return (this[0].dims.height * rows) + (marginY * (rows + 1));
 	}
 
 	function getInstanceX( totalX ) {
@@ -305,14 +334,14 @@
 	var startListen = {};
 
 	startListen.distribute = function( listener ) {
-		$(window).on( 'resize' , listener );
+		$(window).on( 'resize orientationchange' , listener );
 	};
 
 
 	var stopListen = {};
 
 	stopListen.distribute = function( listener ) {
-		$(window).off( 'resize' , listener );
+		$(window).off( 'resize orientationchange' , listener );
 	};
 
 	
