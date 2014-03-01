@@ -44,7 +44,7 @@ tile: {
 
 * __margin:__ the tile margin for distributed view
 * __stackPosition:__ the position of the stacked view
-* __distroDelay:__ the delay between when the distribute method is called and executed
+* __distroDelay:__ the amount of time to delay calling the distribute method on window resize or orientation change
 * __duration:__ the duration of linoleum transitions (i.e. distribute or stack)
 * __easing:__ the easing for linoleum transitions (i.e. distribute or stack)
 * __tile:__ defaults for the linoleum.tile instances
