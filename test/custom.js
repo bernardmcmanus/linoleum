@@ -1,6 +1,6 @@
 (function() {
 
-	var cool = new linoleum( '.tile' , {
+	var awesome = new linoleum( '.tile' , {
 		margin: {
 			left: 20,
 			right: 20,
@@ -14,10 +14,10 @@
 		}
 	});
 
-	cool.distribute( '#container' );
+	awesome.distribute( '#container' );
 
 	$('#distribute').on( 'click' , function() {
-		cool.distribute( '#container' , {} , function() {
+		awesome.distribute( '#container' , {} , function() {
 			console.log('distributed.');
 		});
 	});
@@ -33,7 +33,7 @@
 			easing: 'easeOutExpo'
 		};
 
-		cool.stack( position , options , function() {
+		awesome.stack( position , options , function() {
 			console.log('stacked.');
 		});
 	});
