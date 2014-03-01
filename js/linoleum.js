@@ -7,7 +7,7 @@
 		},
 		distroDelay: 200,
 		duration: 300,
-		easing: 'easeOutBack'
+		easing: 'ease'
 	};
 
 	window.linoleum = function( selector , options ) {
@@ -281,8 +281,14 @@
 		var totalX = getTotalX.call( this , this.options );
 		var cols = getCols.call( this , totalX , dims );
 		
-		/*if (this.Columns === cols)
-			return;*/
+		if (this.Columns === cols) {
+			var opt = $.extend( {} , this.options , {
+				duration: 0,
+				fallback: false
+			});
+			_distribute.call( this , parent , opt );
+			return;
+		}
 
 		var timeout = setTimeout(function() {
 			this.Columns = _distribute.call( this , parent , this.options );

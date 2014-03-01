@@ -136,8 +136,6 @@
 		if ($(window).scrollTop() < containerDims.top)
 			center.y += (containerDims.top - $(window).scrollTop());
 
-		console.log(center);
-
 		return center;
 	}
 
