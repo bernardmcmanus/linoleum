@@ -5,6 +5,12 @@ linoleum
 
 ========
 
+### Dependencies
+
+Linoleum requires the latest versions of <a target="blank" href="http://code.jquery.com/jquery-2.1.0.min.js">jQuery</a> and <a target="blank" href="https://github.com/elnarddogg/jquery.hx">jQuery.hx</a>.
+
+========
+
 ### Instantiation
 
 A new linoleum instance is created as follows:
