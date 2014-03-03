@@ -28,6 +28,7 @@ where `selector` is the selector string for the tile elements and `options` is a
 Options can be passed to the linoleum constructor as well as method calls. Defaults are shown below.
 
 ```javascript
+enabled: true,
 margin: {
 	left: 10,
 	right: 10,
@@ -52,6 +53,7 @@ tile: {
 }
 ```
 
+* __enabled:__ enables setting of tile views
 * __margin:__ the tile margin for distributed view
 * __stackPosition:__ the position of the stacked view
 * __distroDelay:__ the amount of time to delay calling the distribute method on window resize or orientation change
@@ -65,6 +67,20 @@ tile: {
 ========
 
 ### Methods
+
+#### linoleum.enable
+
+```javascript
+awesome.enable();
+```
+
+#### linoleum.disable
+
+```javascript
+awesome.disable( evenActive );
+```
+
+* __evenActive:__ Optional - a boolean denoting whether the active tile, if any, should be disabled.
 
 #### linoleum.distribute
 
@@ -85,6 +101,18 @@ awesome.stack( stackPosition , options , callback );
 * __stackPosition:__ Optional - an object containing the position of the stack relative to the top left corner of the tiles' parent.
 * __options:__ Optional - options for the linoleum.stack method. Accepts _duration_ and _easing_.
 * __callback:__ Optional - a function to be executed upon completion.
+
+#### linoleum.tile.enable
+
+```javascript
+awesome[i].enable();
+```
+
+#### linoleum.tile.disable
+
+```javascript
+awesome[i].disable();
+```
 
 #### linoleum.tile.setView
 
