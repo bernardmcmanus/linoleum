@@ -17,9 +17,14 @@
 		tile: {
 			perspective: 10000,
 			thickness: 0.001,
-			modalZ: 0.5
+			modal: {
+				x: null,
+				y: null,
+				z: 5000
+			}
 		}
 	};
+
 
 	window.linoleum = function( selector , options ) {
 

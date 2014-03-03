@@ -111,7 +111,7 @@
 
 		var viewInfo = views[view].call( this , options );
 
-		delete options.modalZ;
+		delete options.modal;
 
 		viewInfo.xform.tile = $.extend( viewInfo.xform.tile , options );
 		viewInfo.xform.inner = $.extend( viewInfo.xform.inner , options );
@@ -120,25 +120,26 @@
 	}
 
 
-	function getContainerCenter( containerDims ) {
+	function getModalPosition( containerDims , modal ) {
 
-		var center = {x: 0, y: 0};
+		var pos = {x: 0, y: 0};
 
 		if (!containerDims)
-			return center;
+			return pos;
 
-		center.x = (containerDims.width / 2) - (this.dims.width / 2);
-		center.y = ((window.innerHeight / 2) - containerDims.top) - (this.dims.height / 2);
+		modal = $.extend( this.modal , (modal || {}) );
 
-		if ($(window).scrollTop() < containerDims.top)
-			center.y += (containerDims.top - $(window).scrollTop());
+		pos.x = modal.x !== null ? modal.x : (containerDims.width / 2) - (this.dims.width / 2);
+		pos.y = modal.y !== null ? modal.y : ((window.innerHeight / 2) - containerDims.top) - (this.dims.height / 2);
 
-		return center;
-	}
+		if (typeof modal.y === null && $(window).scrollTop() < containerDims.top) {
+			pos.y -= (containerDims.top - $(window).scrollTop());
+		}
+		else if (typeof modal.y !== null && $(window).scrollTop() > containerDims.top) {
+			pos.y += $(window).scrollTop();
+		}
 
-
-	function getModalZ( modalZ ) {
-		return this.perspective * (modalZ || this.modalZ);
+		return pos;
 	}
 
 
@@ -170,18 +171,25 @@
 
 	views.modal = function( options ) {
 
+		options = options || {};
+
 		var dims = this.parentNode.getBoundingClientRect();
-		var t = getContainerCenter.call( this , dims );
-		var z = getModalZ.call( this , options.modalZ );
+		var t = getModalPosition.call( this , dims , options.modal );
 		
 		var tile = {
 			translate: t,
 			relative: false
 		};
 
+		var modalZ = this.modal.z;
+
+		if (typeof options.modal !== 'undefined' && typeof options.modal.z !== 'undefined') {
+			modalZ = options.modal.z;
+		}
+
 		var inner = {
 			translate: {
-				z: z
+				z: modalZ
 			},
 			rotate: {y: 1, a: 180},
 			relative: false

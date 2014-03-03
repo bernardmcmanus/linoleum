@@ -10,7 +10,10 @@
 		duration: 500,
 		easing: 'easeOutBack',
 		tile: {
-			modalZ: 0.6
+			modal: {
+				y: 150,
+				z: 6500
+			}
 		}
 	});
 
@@ -42,7 +45,9 @@
 		
 		var options = {
 			duration: 300,
-			modalZ: 0.6,
+			modal: {
+				z: 6500
+			},
 			easing: 'easeOutBack'
 		};
 		
