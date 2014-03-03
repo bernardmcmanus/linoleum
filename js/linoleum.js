@@ -1,6 +1,7 @@
 (function() {
 
 	var config = {
+		enabled: true,
 		margin: {
 			left: 10,
 			right: 10,
@@ -41,7 +42,13 @@
 			tiles.push(new linoleum.tile( i , this.options.tile ));
 		}.bind( this ));
 
-		return $.extend( tiles , this );
+		var that = $.extend( tiles , this );
+
+		if (!that.options.enabled) {
+			that.disable();
+		}
+
+		return that;
 	};
 
 	linoleum.prototype = {
@@ -143,6 +150,31 @@
 
 			stopListen[ view ].call( this , this.listener );
 			this.listener = null;
+		},
+
+		isEnabled: function() {
+			return this.enabled === true;
+		},
+
+		enable: function() {
+			
+			this.forEach(function( tile ) {
+				tile.enable();
+			});
+			
+			this.enabled = true;
+		},
+
+		disable: function( evenActive ) {
+			
+			this.forEach(function( tile ) {
+				if (!evenActive && $(tile).hasClass( 'active' )) {
+					return;
+				}
+				tile.disable();
+			});
+			
+			this.enabled = false;
 		},
 
 		_activate: function() {

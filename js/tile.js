@@ -6,6 +6,7 @@
 			throw 'Error: You must pass an element to the linoleum.tile constructor.';
 
 		options = $.extend({
+			enabled: true,
 			dims: getDims( element ),
 			view: 'home',
 			home: {}
@@ -36,7 +37,7 @@
 
 		setView: function ( view , options , callback ) {
 
-			if (this.view === view)
+			if (this.view === view || !this.enabled)
 				return;
 
 			if (typeof views[view] !== 'function')
@@ -63,11 +64,19 @@
 			this.home = xform;
 		},
 
+		isEnabled: function() {
+			return this.enabled === true;
+		},
+
+		enable: function() {
+			this.enabled = true;
+		},
+
+		disable: function( all ) {
+			this.enabled = false;
+		},
+
 		_activate: function() {
-
-			if ($(this).siblings( '.active' ).length > 0)
-				$(this).siblings( '.active' ).get( 0 ).setView( 'home' );
-
 			$(this).addClass( 'active' );
 		},
 

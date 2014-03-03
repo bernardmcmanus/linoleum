@@ -55,12 +55,14 @@
 
 			this.setView( 'modal' , options , function() {
 				console.log('modal.');
+				awesome.disable();
 			});
 		}
 		else {
 
 			this.setView( 'home' , options , function() {
 				console.log('home.');
+				awesome.enable();
 			});
 		}
 
