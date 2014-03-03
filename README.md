@@ -44,7 +44,11 @@ easing: 'ease',
 tile: {
 	perspective: 10000,
 	thickness: 0.001,
-	modalZ: 0.5
+	modal: {
+		x: null,
+		y: null,
+		z: 5000
+	}
 }
 ```
 
@@ -56,7 +60,7 @@ tile: {
 * __tile:__ defaults for the linoleum.tile instances
 * __tile.perspective:__ the perspective (in pixels) for a linoleum.tile instance
 * __tile.thickness:__ the thickness (as a percentage of perspective) for a linoleum.tile instance
-* __tile.modalZ:__ the z-translation distance (as a percentage of perspective) for a linoleum.tile instance
+* __tile.modal:__ the translation distances (in pixels) for a linoleum.tile instance modal view (null = centered)
 
 ========
 
@@ -89,7 +93,7 @@ awesome[i].setView( view , options , callback );
 ```
 
 * __view:__ __Required__ - a string denoting the desired view. Valid views are `home` and `modal`.
-* __options:__ Optional - options for the linoleum.stack method. Accepts _modalZ_, _duration_, and _easing_.
+* __options:__ Optional - options for the linoleum.stack method. Accepts _modal_, _duration_, and _easing_.
 * __callback:__ Optional - a function to be executed upon completion.
 
 
