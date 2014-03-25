@@ -7,7 +7,7 @@ linoleum
 
 ### Dependencies
 
-Linoleum requires <a target="blank" href="https://github.com/elnarddogg/jquery.hx">jQuery.hx</a> version 0.7.3 or higher.
+Linoleum requires <a target="blank" href="https://github.com/elnarddogg/jquery.hx">jQuery.hx</a> version 1.0.0 or higher.
 
 ========
 
@@ -121,7 +121,7 @@ awesome[i].setView( view , options , callback );
 ```
 
 * __view:__ __Required__ - a string denoting the desired view. Valid views are `home` and `modal`.
-* __options:__ Optional - options for the linoleum.stack method. Accepts _modal_, _duration_, and _easing_.
+* __options:__ Optional - options for the linoleum.tile.setView method. Accepts _modal_, _duration_, and _easing_.
 * __callback:__ Optional - a function to be executed upon completion.
 
 

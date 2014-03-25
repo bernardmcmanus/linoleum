@@ -2,19 +2,12 @@
 
 	var awesome = new linoleum( '.tile' , {
 		margin: {
-			left: 20,
-			right: 20,
-			top: 10,
-			bottom: 120
-		},
-		duration: 500,
-		easing: 'easeOutBack',
-		tile: {
-			modal: {
-				y: 150,
-				z: 6500
-			}
-		}
+            left: 5,
+            right: 20,
+            top: 40,
+            bottom: 40
+        },
+		duration: 500
 	});
 
 	awesome.distribute( '#container' );
@@ -42,13 +35,16 @@
 	});
 
 	$('.tile').on( 'click' , function() {
+
+		var top = $('#container').position().top;
+		var y = top * 2;
 		
 		var options = {
 			duration: 300,
 			modal: {
+				y: $(window).scrollTop() < top ? ($(window).scrollTop() + y) : ($(window).scrollTop() + y - top),
 				z: 6500
-			},
-			easing: 'easeOutBack'
+			}
 		};
 		
 		if (this.view === 'home') {
@@ -56,6 +52,7 @@
 			this.setView( 'modal' , options , function() {
 				console.log('modal.');
 				awesome.disable();
+				console.log(this.getBoundingClientRect().top);
 			});
 		}
 		else {
