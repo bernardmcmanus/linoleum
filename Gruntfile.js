@@ -9,7 +9,7 @@ module.exports = function( grunt ) {
 
             pkg: grunt.file.readJSON('package.json'),
 
-            clean : ["linoleum-v*"],
+            clean : ["linoleum-*"],
 
             uglify : {
                 options : {
@@ -17,7 +17,7 @@ module.exports = function( grunt ) {
                 },
                 release : {
                     files : {
-                        'linoleum-v<%= pkg.version %>.min.js' : libs
+                        'linoleum-<%= pkg.version %>.min.js' : libs
                     }
                 }
             },
