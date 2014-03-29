@@ -36,6 +36,7 @@
         }
 
         this.options = $.extend( true , config , ( options || {} ));
+        this.listeners = {};
 
         var tiles = [];
 
@@ -77,16 +78,21 @@
                 throw 'Error: You must pass a valid selector to linoleum.distribute.';
             }
 
+            this._startListen( 'sizer' );
+
             options = $.extend({
                 margin: this.options.margin,
                 duration: this.options.duration,
                 easing: this.options.easing
             }, (options || {}));
 
-            this.Columns = _distribute.call( this , parent , options , function() {
+            var grid = _distribute.call( this , parent , options , function() {
                 this.enable();
                 callback.call( this );
             });
+
+            this.Columns = grid.Columns;
+            this.Rows = grid.Rows;
 
             return this;
         },
@@ -96,6 +102,8 @@
             if (!this._setView( 'stack' )) {
                 return;
             }
+
+            this._stopListen( 'sizer' );
 
             position = $.extend( config.stackPosition , (position || {}));
 
@@ -148,28 +156,28 @@
             return true;
         },
 
-        _startListen: function( view ) {
+        _startListen: function( type ) {
 
-            if (this.listener || typeof listeners[ view ] !== 'function') {
+            if (this.listeners[ type ] || typeof listeners[ type ] !== 'function') {
                 return;
             }
             
-            this.listener = listeners[ view ].bind( this );
-            startListen[ view ].call( this , this.listener );
+            this.listeners[ type ] = listeners[ type ].bind( this );
+            startListen[ type ].call( this , this.listeners[ type ] );
         },
 
-        _stopListen: function( view ) {
+        _stopListen: function( type ) {
 
-            if (!view) {
+            if (!type) {
                 return;
             }
             
-            if (!this.listener || typeof listeners[ view ] !== 'function') {
+            if (!this.listeners[ type ] || typeof listeners[ type ] !== 'function') {
                 return;
             }
 
-            stopListen[ view ].call( this , this.listener );
-            this.listener = null;
+            stopListen[ type ].call( this , this.listeners[ type ] );
+            delete this.listeners[ type ];
         },
 
         isEnabled: function() {
@@ -198,11 +206,27 @@
         },
 
         _activate: function() {
-            $(this).css( 'pointer-events' , 'auto' );
+            $(this).css( 'pointer-events' , '' );
         },
 
         _deactivate: function() {
             $(this).css( 'pointer-events' , 'none' );
+        },
+
+        sizeSizer: function( options ) {
+
+            if (typeof this.Rows === 'undefined') {
+                return;
+            }
+
+            options = $.extend({
+                margin: this.options.margin
+            } , ( options || {} ));
+
+            var parent = this[0].parentNode;
+            var totalY = getTotalY.call( this , this.Rows , options );
+
+            $(parent).children( '.sizer' ).css( 'height' , totalY + 'px' );
         }
 
     };
@@ -263,15 +287,14 @@
 
             tile.setHome( t );
 
-            $(tile).hx({
+            $(tile).hx( 'clear' ).hx({
                 type: 'transform',
                 translate: t,
                 easing: options.easing,
                 duration: options.duration
             });
 
-            $(tile).find( '.inner' )
-            .hx({
+            $(tile).find( '.inner' ).hx( 'clear' ).hx({
                 type: 'transform',
                 rotate: null,
                 duration: options.duration,
@@ -280,14 +303,10 @@
             .done(checkComplete.bind( this ));
         }
 
-        function sizeSizer( rows ) {
-            var totalY = getTotalY.call( this , rows , options );
-            $(parent).children( '.sizer' ).css( 'height' , totalY + 'px' );
-        }
-
         function checkComplete() {
             completed++;
             if (completed === this.length) {
+                this.sizeSizer( options );
                 callback.call( this );
             }
         }
@@ -297,8 +316,6 @@
             var totalX = getTotalX.call( this , options );
             Columns = getCols.call( this , totalX , containerDims );
             Rows = getRows.call( this , Columns );
-
-            sizeSizer.call( this , Rows );
 
             var i = 0;
 
@@ -318,8 +335,13 @@
         }
 
         exec.call( this );
-        return Columns;
+
+        return {
+            Columns: Columns,
+            Rows: Rows
+        };
     }
+
 
     function getCenterOffsetX( tile , cols , options ) {
         var parentDims = tile.parentNode.getBoundingClientRect();
@@ -366,48 +388,94 @@
     }
 
 
-    var listeners = {};
+    var listeners = {
 
-    listeners.distribute = function( e ) {
+        distribute: function( e ) {
 
-        var parent = this[0].parentNode;
-        var dims = parent.getBoundingClientRect();
-        
-        var totalX = getTotalX.call( this , this.options );
-        var cols = getCols.call( this , totalX , dims );
-        
-        if (this.Columns === cols) {
-            var opt = $.extend( {} , this.options , {
-                duration: 0,
-                fallback: false
-            });
-            _distribute.call( this , parent , opt );
-            return;
+            var parent = this[0].parentNode;
+            var dims = parent.getBoundingClientRect();
+            
+            var totalX = getTotalX.call( this , this.options );
+            var cols = getCols.call( this , totalX , dims );
+            
+            if (this.Columns === cols) {
+                var opt = $.extend( {} , this.options , {
+                    duration: 0,
+                    fallback: false
+                });
+                _distribute.call( this , parent , opt );
+                return;
+            }
+
+            var optionSet = null;
+
+            var handle = function() {
+                var grid = _distribute.call( this , parent , optionSet );
+                this.Columns = grid.Columns;
+                this.Rows = grid.Rows;
+
+            }.bind( this );
+
+            if (this.options.distroDelay) {
+
+                optionSet = this.options;
+                var timeout = setTimeout( handle , this.options.distroDelay );
+
+                $(window).on( 'resize orientationchange' , function timer() {
+                    $(window).off( 'resize orientationchange' , timer );
+                    clearTimeout( timeout );
+                });
+            }
+            else {
+
+                optionSet = {
+                    duration: 0,
+                    fallback: false,
+                    margin: this.options.margin
+                };
+
+                $(window).on( 'resize orientationchange' , handle );
+            }
+        },
+
+        sizer: function( e ) {
+
+            var parent = this[0].parentNode;
+            var dims = parent.getBoundingClientRect();
+            var top = parseInt(getComputedStyle( parent ).top , 10 );
+
+            function size( h ) {
+                h = ((typeof h !== 'undefined' && typeof h !== 'object') ? h : ($(window).height() - dims.top - $(window).scrollTop()));
+                $(parent).children( '.sizer' ).css( 'min-height' , h + 'px' );
+            }
+
+            size();
         }
-
-        var timeout = setTimeout(function() {
-            this.Columns = _distribute.call( this , parent , this.options );
-        }.bind( this ) , this.options.distroDelay );
-
-        $(window).on( 'resize orientationchange' , function timer() {
-            $(window).off( 'resize orientationchange' , timer );
-            clearTimeout( timeout );
-        });
-
     };
 
 
-    var startListen = {};
+    var startListen = {
 
-    startListen.distribute = function( listener ) {
-        $(window).on( 'resize orientationchange' , listener );
+        distribute: function( listener ) {
+            $(window).on( 'resize orientationchange' , listener );
+        },
+
+        sizer: function( listener ) {
+            $(window).on( 'resize orientationchange' , listener );
+            listener();
+        }
     };
 
 
-    var stopListen = {};
+    var stopListen = {
 
-    stopListen.distribute = function( listener ) {
-        $(window).off( 'resize orientationchange' , listener );
+        distribute: function( listener ) {
+            $(window).off( 'resize orientationchange' , listener );
+        },
+
+        sizer: function( listener ) {
+            $(window).off( 'resize orientationchange' , listener );
+        }
     };
 
     

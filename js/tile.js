@@ -73,10 +73,12 @@
 
         enable: function() {
             this.enabled = true;
+            $(this).css( 'pointer-events' , '' );
         },
 
         disable: function( all ) {
             this.enabled = false;
+            $(this).css( 'pointer-events' , 'none' );
         },
 
         _activate: function() {
