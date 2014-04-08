@@ -103,12 +103,12 @@
 
             var grid = _distribute( this , options , function() {
                 this.enable();
-                this.sizeSizer();
                 callback.call( this );
             });
 
             this.Columns = grid.Columns;
             this.Rows = grid.Rows;
+            this.sizeSizer();
 
             return this;
         },
@@ -495,7 +495,7 @@
                 var grid = _distribute( this , optionSet );
                 this.Columns = grid.Columns;
                 this.Rows = grid.Rows;
-
+                this.sizeSizer();
             }.bind( this );
 
             if (this.options.distroDelay) {
