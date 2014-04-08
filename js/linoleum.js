@@ -13,17 +13,28 @@
             y: 0
         },
         distroDelay: 200,
+        distroSelector: null,
         duration: 300,
         easing: 'ease',
         tile: {
             perspective: 10000,
-            thickness: 0.001,
+            thickness: 0.0001,
             modal: {
                 x: null,
                 y: null,
                 z: 5000
             }
         }
+    };
+
+
+    var callbacks = {
+        onTileInclude: function() {},
+        onTileExclude: function() {},
+        beforeFilter: function() {},
+        afterFilter: function() {},
+        beforeSort: function() {},
+        afterSort: function() {}
     };
 
 
@@ -35,13 +46,14 @@
             throw 'Error: You must pass a valid selector to the linoleum constructor.';
         }
 
+        $.extend( this , callbacks );
         this.options = $.extend( true , config , ( options || {} ));
         this.listeners = {};
 
         var tiles = [];
 
         Array.prototype.forEach.call( els , function( i ) {
-            tiles.push(new linoleum.tile( i , this.options.tile ));
+            tiles.push( new linoleum.tile( i , this.options.tile ));
         }.bind( this ));
 
         var that = $.extend( tiles , this );
@@ -60,11 +72,13 @@
 
         distribute: function( selector , options , callback ) {
 
+            selector = selector || this.distroSelector;
+
             if (!this._setView( 'distribute' )) {
                 return;
             }
 
-            if (this.length < 1) {
+            if (this.count( true ) < 1) {
                 return;
             }
 
@@ -72,9 +86,10 @@
                 throw 'Error: You must pass a valid selector to linoleum.distribute.';
             }
 
+            this.distroSelector = selector;
             var parent = document.querySelector( selector );
 
-            if (!parent || parent.length < 1) {
+            if (!document.querySelector( selector )) {
                 throw 'Error: You must pass a valid selector to linoleum.distribute.';
             }
 
@@ -86,8 +101,9 @@
                 easing: this.options.easing
             }, (options || {}));
 
-            var grid = _distribute.call( this , parent , options , function() {
+            var grid = _distribute( this , options , function() {
                 this.enable();
+                this.sizeSizer();
                 callback.call( this );
             });
 
@@ -116,7 +132,7 @@
 
             var t = null;
 
-            for (var i = 0; i < this.length; i++) {
+            for (var i = 0; i < this.count( true ); i++) {
                 if (this[i].view !== 'home') {
                     t = i;
                     break;
@@ -125,20 +141,77 @@
 
             if (t !== null) {
                 this[t].setView( 'home' , options , function() {
-                    _stack.call( this , position , options , callback );
+                    _stack( this , position , options , callback );
                 }.bind( this ));
             }
             else {
-                _stack.call( this , position , options , callback );
+                _stack( this , position , options , callback );
             }
 
             return this;
         },
 
+        sort: function( order ) {
+            console.log(order);
+        },
+
+        filter: function( exclude ) {
+            
+            exclude = exclude || [];
+
+            this.beforeFilter();
+
+            this.forEach(function( tile , i ) {
+                
+                if (exclude.indexOf( i ) >= 0) {
+                    tile.exclude();
+                    this.onTileExclude( tile );
+                }
+                else if (!tile.isIncluded()) {
+                    tile.include();
+                    this.onTileInclude( tile );
+                }
+
+            }.bind( this ));
+
+            this.afterFilter();
+        },
+
+        count: function( countExcluded ) {
+            countExcluded = (typeof countExcluded !== 'undefined' ? countExcluded : false);
+            var count = 0;
+            this.forEach(function( tile ) {
+                if (tile.isIncluded() || countExcluded) {
+                    count++;
+                }
+            });
+            return count;
+        },
+
+        getIncluded: function() {
+            var list = [];
+            this.forEach(function( tile ) {
+                if (tile.isIncluded()) {
+                    list.push( tile );
+                }
+            });
+            return list;
+        },
+
+        getExcluded: function() {
+            var list = [];
+            this.forEach(function( tile ) {
+                if (!tile.isIncluded()) {
+                    list.push( tile );
+                }
+            });
+            return list;
+        },
+
         _setView: function ( view ) {
             
             if (this.view === view) {
-                return false;
+                return true;
             }
 
             this._stopListen( this.view );
@@ -223,8 +296,8 @@
                 margin: this.options.margin
             } , ( options || {} ));
 
-            var parent = this[0].parentNode;
-            var totalY = getTotalY.call( this , this.Rows , options );
+            var parent = document.querySelector( this.distroSelector );
+            var totalY = getTotalY( this , this.Rows , options );
 
             $(parent).children( '.sizer' ).css( 'height' , totalY + 'px' );
         }
@@ -232,7 +305,7 @@
     };
 
 
-    function _stack( translate , options , callback ) {
+    function _stack( instance , translate , options , callback ) {
 
         var xformTile = $.extend({
             type: 'transform',
@@ -246,39 +319,48 @@
 
         var completed = 0;
 
-        function position( tile ) {
+        function position( tile , resolve ) {
+            resolve = resolve || function() {};
             $(tile).hx( xformTile );
             $(tile).find( '.inner' )
             .hx( xformInner )
-            .done(checkComplete.bind( this ));
-        }
-
-        function checkComplete() {
-            completed++;
-            if (completed === this.length) {
-                callback.call( this );
-            }
+            .done( resolve );
         }
 
         function exec() {
-            this.forEach(position.bind( this ));
+
+            var targetSet = instance.getIncluded();
+            var promiseSet = [];
+            
+            targetSet.forEach(function( tile ) {
+                promiseSet.push(
+                    new Promise(function( resolve ) {
+                        position( tile , resolve );
+                    })
+                );
+            });
+            
+            Promise.all( promiseSet ).then( callback.bind( instance ));
         }
 
-        exec.call( this );
+        exec();
     }
 
 
-    function _distribute( parent , options , callback ) {
+    function _distribute( instance , options , callback ) {
 
         callback = callback || function() {};
+        var parent = document.querySelector( instance.distroSelector );
         var containerDims = parent.getBoundingClientRect();
         var Columns = 0;
         var Rows = 0;
         var completed = 0;
 
-        function position( tile , row , col ) {
+        function position( tile , row , col , resolve ) {
 
-            var ox = getCenterOffsetX( tile , Columns , options );
+            resolve = resolve || function() {};
+
+            var ox = getCenterOffsetX( instance , tile , Columns , options );
 
             var t = {
                 x: (col * tile.dims.width) + (options.margin.left * (col + 1)) + (options.margin.right * (col + 1)) + ox,
@@ -287,54 +369,54 @@
 
             tile.setHome( t );
 
-            $(tile).hx( 'clear' ).hx({
+            $(tile).hx({
                 type: 'transform',
                 translate: t,
                 easing: options.easing,
                 duration: options.duration
             });
 
-            $(tile).find( '.inner' ).hx( 'clear' ).hx({
+            $(tile).find( '.inner' ).hx({
                 type: 'transform',
                 rotate: null,
                 duration: options.duration,
                 easing: options.easing
             })
-            .done(checkComplete.bind( this ));
-        }
-
-        function checkComplete() {
-            completed++;
-            if (completed === this.length) {
-                this.sizeSizer( options );
-                callback.call( this );
-            }
+            .done( resolve );
         }
 
         function exec() {
 
-            var totalX = getTotalX.call( this , options );
-            Columns = getCols.call( this , totalX , containerDims );
-            Rows = getRows.call( this , Columns );
+            var totalX = getTotalX( instance , options );
+            Columns = getCols( instance , totalX , containerDims );
+            Rows = getRows( instance , Columns );
 
             var i = 0;
+            var targetSet = instance.getIncluded();
+            var promiseSet = [];
+
 
             for (var row = 0; row < Rows; row++) {
-
                 for (var col = 0; col < Columns; col++) {
-
-                    if (i >= this.length) {
+                    
+                    if (i >= instance.count()) {
                         continue;
                     }
-
-                    position.call( this , this[i] , row , col );
+                    
+                    promiseSet.push(
+                        new Promise(function( resolve ) {
+                            position( targetSet[i] , row , col , resolve );
+                        })
+                    );
 
                     i++;
                 }
             }
+
+            Promise.all( promiseSet ).then( callback.bind( instance ));
         }
 
-        exec.call( this );
+        exec();
 
         return {
             Columns: Columns,
@@ -342,38 +424,38 @@
         };
     }
 
-
-    function getCenterOffsetX( tile , cols , options ) {
-        var parentDims = tile.parentNode.getBoundingClientRect();
+    function getCenterOffsetX( instance , tile , cols , options ) {
+        var parent = document.querySelector( instance.distroSelector );
+        var parentDims = parent.getBoundingClientRect();
         var marginX = options.margin.left + options.margin.right;
         return (parentDims.width - (tile.dims.width * cols) - (marginX * (cols + 1))) / 2;
     }
 
-    function getTotalX( options ) {
+    function getTotalX( instance , options ) {
         var marginX = options.margin.left + options.margin.right;
-        return (this[0].dims.width * this.length) + (marginX * (this.length + 1));
+        return (instance[0].dims.width * instance.count()) + (marginX * (instance.count() + 1));
     }
 
-    function getTotalY( rows , options ) {
+    function getTotalY( instance , rows , options ) {
         var marginY = options.margin.top + options.margin.bottom;
-        return (this[0].dims.height * rows) + (marginY * (rows + 1));
+        return (instance[0].dims.height * rows) + (marginY * (rows + 1));
     }
 
-    function getInstanceX( totalX ) {
-        return totalX / this.length;
+    function getInstanceX( instance , totalX ) {
+        return totalX / instance.count();
     }
 
     function getInstanceY( rows , totalY ) {
         return totalY / rows;
     }
 
-    function getRows( cols ) {
-        return Math.ceil( this.length / cols );
+    function getRows( instance , cols ) {
+        return Math.ceil( instance.count() / cols );
     }
 
-    function getCols( totalX , containerDims ) {
+    function getCols( instance , totalX , containerDims ) {
         
-        var instX = getInstanceX.call( this , totalX );
+        var instX = getInstanceX( instance , totalX );
         var cols = 0;
         
         while ((cols * instX) < containerDims.width) {
@@ -392,25 +474,25 @@
 
         distribute: function( e ) {
 
-            var parent = this[0].parentNode;
+            var parent = document.querySelector( this.distroSelector );
             var dims = parent.getBoundingClientRect();
             
-            var totalX = getTotalX.call( this , this.options );
-            var cols = getCols.call( this , totalX , dims );
+            var totalX = getTotalX( this , this.options );
+            var cols = getCols( this , totalX , dims );
             
             if (this.Columns === cols) {
                 var opt = $.extend( {} , this.options , {
                     duration: 0,
                     fallback: false
                 });
-                _distribute.call( this , parent , opt );
+                _distribute( this , opt );
                 return;
             }
 
             var optionSet = null;
 
             var handle = function() {
-                var grid = _distribute.call( this , parent , optionSet );
+                var grid = _distribute( this , optionSet );
                 this.Columns = grid.Columns;
                 this.Rows = grid.Rows;
 
@@ -440,7 +522,7 @@
 
         sizer: function( e ) {
 
-            var parent = this[0].parentNode;
+            var parent = document.querySelector( this.distroSelector );
             var dims = parent.getBoundingClientRect();
             var top = parseInt(getComputedStyle( parent ).top , 10 );
 

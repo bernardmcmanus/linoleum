@@ -1,19 +1,21 @@
 (function( linoleum ) {
 
+
+    var config = {
+        enabled: true,
+        view: 'home',
+        home: {},
+        Include: true
+    };
+
+
     var tile = function( element , options ) {
 
         if (!element) {
             throw 'Error: You must pass an element to the linoleum.tile constructor.';
         }
 
-        options = $.extend({
-            enabled: true,
-            dims: getDims( element ),
-            view: 'home',
-            home: {}
-        } , options );
-
-        $.extend( this , options );
+        $.extend( this , config , options );
 
         return this._init( element );
     };
@@ -22,16 +24,18 @@
 
         _init: function( element ) {
 
+            this.dims = getDims( element );
+
             element.style.webkitPerspective = this.perspective + 'px';
             element.style.perspective = this.perspective + 'px';
 
             var front = $(element).find( '.face.front' ).get( 0 );
             var back = $(element).find( '.face.back' ).get( 0 );
 
-            var tz = (this.thickness * this.perspective) / 2;
+            var tz = (this.thickness * this.perspective) / 1;
 
             setDepth( front , tz );
-            setDepth( back , -tz );
+            setDepth( back , -tz , 180 );
 
             return $.extend( element , this );
         },
@@ -71,7 +75,24 @@
             return this.enabled === true;
         },
 
+        isIncluded: function() {
+            return this.Include === true;
+        },
+
+        exclude: function() {
+            this.Include = false;
+            this.disable();
+        },
+
+        include: function() {
+            this.Include = true;
+            this.enable();
+        },
+
         enable: function() {
+            if (!this.isIncluded()) {
+                return;
+            }
             this.enabled = true;
             $(this).css( 'pointer-events' , '' );
         },
@@ -106,11 +127,12 @@
     }
 
 
-    function setDepth( element , z ) {
+    function setDepth( element , z , r ) {
 
         $(element).hx({
             type: 'transform',
             translate: {z: z},
+            rotateY: (r || null),
             duration: 0,
             fallback: false
         });

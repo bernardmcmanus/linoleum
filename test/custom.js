@@ -1,5 +1,9 @@
 (function() {
 
+	
+	addNumbers();
+
+	
 	var awesome = new linoleum( '.tile' , {
 		margin: {
             left: 5,
@@ -7,10 +11,23 @@
             top: 40,
             bottom: 40
         },
-		duration: 500
+		duration: 600
 	});
 
+	awesome.onTileExclude = function( tile ) {
+		$(tile).addClass( 'exclude' );
+	};
+
+	awesome.onTileInclude = function( tile ) {
+		$(tile).removeClass( 'exclude' );
+	};
+
+	awesome.afterFilter = function() {
+		this.distribute();
+	};
+
 	awesome.distribute( '#container' );
+
 
 	$('#distribute').on( 'click' , function() {
 		awesome.distribute( '#container' , {} , function() {
@@ -32,6 +49,17 @@
 		awesome.stack( position , options , function() {
 			console.log('stacked.');
 		});
+	});
+
+	$('#filter').on( 'click' , function() {
+		var exclude = $('#filter-input').val().split( ',' ).map(function( a ) {
+			return parseInt( a , 10 );
+		});
+		awesome.filter( exclude );
+	});
+
+	$('#clear').on( 'click' , function() {
+		awesome.filter( [] );
 	});
 
 	$('.tile').on( 'click' , function() {
@@ -64,6 +92,13 @@
 		}
 
 	});
+
+	function addNumbers() {
+		$('.tile').each(function( i ) {
+			var n = i + 1;
+			$(this).find( '.inner' ).children().html( n );
+		});
+	}
 
 }());
 
