@@ -26,6 +26,10 @@
 		this.distribute();
 	};
 
+	awesome.afterSort = function() {
+		this.distribute();
+	};
+
 	awesome.distribute( '#container' );
 
 
@@ -56,6 +60,12 @@
 			return parseInt( a , 10 );
 		});
 		awesome.filter( exclude );
+	});
+
+	$('#sort').on( 'click' , function() {
+		var order = getSequentialArray().reverse();
+		awesome.sort( order );
+		//awesome.sort([ 9 , 8 , 7 , 6 , 5 , 4 , 3 ]);
 	});
 
 	$('#clear').on( 'click' , function() {
@@ -98,6 +108,14 @@
 			var n = i + 1;
 			$(this).find( '.inner' ).children().html( n );
 		});
+	}
+
+	function getSequentialArray() {
+		var arr = [];
+		$('.tile').each(function( i ) {
+			arr.push( i );
+		});
+		return arr;
 	}
 
 }());

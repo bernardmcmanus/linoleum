@@ -141,18 +141,48 @@
 
             if (t !== null) {
                 this[t].setView( 'home' , options , function() {
-                    _stack( this , position , options , callback );
+                    _stack( this , position , options , function() {
+                        //this.sizeSizer();
+                        callback.apply( this , arguments );
+                    });
                 }.bind( this ));
             }
             else {
-                _stack( this , position , options , callback );
+                _stack( this , position , options , function() {
+                    //this.sizeSizer();
+                    callback.apply( this , arguments );
+                });
             }
 
             return this;
         },
 
         sort: function( order ) {
-            console.log(order);
+            
+            order = order || [];
+            var used = [], unused = [], list = [];
+
+            list = this.getTiles();
+            unused = this.getIncluded();
+
+            this.beforeSort();
+
+            order.forEach(function( index , i ) {
+                
+                if (unused.length <= index) {
+                    return;
+                }
+
+                var tile = unused.splice( index , 1 )[0];
+                var k = list.indexOf( tile );
+                list.splice( k , 1 );
+                used.push( tile );
+            });
+
+            var newlist = used.concat( list );
+            $.extend( this , newlist );
+
+            this.afterSort();
         },
 
         filter: function( exclude ) {
@@ -186,6 +216,14 @@
                 }
             });
             return count;
+        },
+
+        getTiles: function() {
+            var list = [];
+            this.forEach(function( tile ) {
+                list.push( tile );
+            });
+            return list;
         },
 
         getIncluded: function() {
