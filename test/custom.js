@@ -11,7 +11,7 @@
             top: 40,
             bottom: 40
         },
-		duration: 600
+		duration: 400
 	});
 
 	awesome.onTileExclude = function( tile ) {
