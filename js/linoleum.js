@@ -12,18 +12,21 @@
             x: 0,
             y: 0
         },
+        indexAttribute: 'data-index',
         distroDelay: 200,
         distroSelector: null,
         duration: 300,
-        easing: 'ease',
-        tile: {
-            perspective: 10000,
-            thickness: 0.0001,
-            modal: {
-                x: null,
-                y: null,
-                z: 5000
-            }
+        easing: 'ease'
+    };
+
+    config.tile = {
+        indexAttribute: config.indexAttribute,
+        perspective: 10000,
+        thickness: 0.0001,
+        modal: {
+            x: null,
+            y: null,
+            z: 5000
         }
     };
 
@@ -52,8 +55,12 @@
 
         var tiles = [];
 
-        Array.prototype.forEach.call( els , function( i ) {
-            tiles.push( new linoleum.tile( i , this.options.tile ));
+        Array.prototype.forEach.call( els , function( element , i ) {
+            tiles.push( new linoleum.tile( element , this.options.tile ));
+            var index = element.dataset[ this.options.indexAttribute ];
+            if (typeof index === 'undefined') {
+                element.setAttribute( this.options.indexAttribute , i );
+            }
         }.bind( this ));
 
         var that = $.extend( tiles , this );
@@ -157,31 +164,16 @@
             return this;
         },
 
-        sort: function( order ) {
+        sort: function( func ) {
+
+            func = func || function() { return 0; };
             
-            order = order || [];
-            var used = [], unused = [], list = [];
-
-            list = this.getTiles();
-            unused = this.getIncluded();
-
             this.beforeSort();
-
-            order.forEach(function( index , i ) {
-                
-                if (unused.length <= index) {
-                    return;
-                }
-
-                var tile = unused.splice( index , 1 )[0];
-                var k = list.indexOf( tile );
-                list.splice( k , 1 );
-                used.push( tile );
-            });
-
-            var newlist = used.concat( list );
-            $.extend( this , newlist );
-
+            
+            var list = this.getTiles().sort( func );
+            
+            $.extend( this , list );
+            
             this.afterSort();
         },
 
@@ -191,7 +183,9 @@
 
             this.beforeFilter();
 
-            this.forEach(function( tile , i ) {
+            this.forEach(function( tile ) {
+
+                var i = tile.getIndex();
                 
                 if (exclude.indexOf( i ) >= 0) {
                     tile.exclude();

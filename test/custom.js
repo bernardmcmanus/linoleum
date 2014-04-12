@@ -63,9 +63,17 @@
 	});
 
 	$('#sort').on( 'click' , function() {
-		var order = getSequentialArray().reverse();
-		awesome.sort( order );
-		//awesome.sort([ 9 , 8 , 7 , 6 , 5 , 4 , 3 ]);
+
+		var rand = Math.round(Math.random());
+
+		awesome.sort(function( a , b ) {
+			if (rand > 0) {
+				return a.getIndex() - b.getIndex();
+			}
+			else {
+				return b.getIndex() - a.getIndex();
+			}
+		});
 	});
 
 	$('#clear').on( 'click' , function() {
@@ -108,14 +116,6 @@
 			var n = i + 1;
 			$(this).find( '.inner' ).children().html( n );
 		});
-	}
-
-	function getSequentialArray() {
-		var arr = [];
-		$('.tile').each(function( i ) {
-			arr.push( i );
-		});
-		return arr;
 	}
 
 }());

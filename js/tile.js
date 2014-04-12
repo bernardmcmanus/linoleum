@@ -89,6 +89,11 @@
             this.enable();
         },
 
+        getIndex: function() {
+            var attribute = this.indexAttribute.replace( /data\-/ , '' );
+            return parseInt( this.dataset[attribute] , 10 );
+        },
+
         enable: function() {
             if (!this.isIncluded()) {
                 return;
