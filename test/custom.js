@@ -1,5 +1,8 @@
 (function() {
 
+
+	var sortOrder = -1;
+
 	
 	addNumbers();
 
@@ -64,16 +67,16 @@
 
 	$('#sort').on( 'click' , function() {
 
-		var rand = Math.round(Math.random());
-
 		awesome.sort(function( a , b ) {
-			if (rand > 0) {
+			if (sortOrder > 0) {
 				return a.getIndex() - b.getIndex();
 			}
 			else {
 				return b.getIndex() - a.getIndex();
 			}
 		});
+
+		sortOrder = (sortOrder < 0 ? 1 : -1);
 	});
 
 	$('#clear').on( 'click' , function() {

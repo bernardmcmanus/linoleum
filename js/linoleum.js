@@ -13,6 +13,7 @@
             y: 0
         },
         indexAttribute: 'data-index',
+        stickyClass: 'sticky',
         distroDelay: 200,
         distroSelector: null,
         duration: 300,
@@ -21,6 +22,7 @@
 
     config.tile = {
         indexAttribute: config.indexAttribute,
+        stickyClass: config.stickyClass,
         perspective: 10000,
         thickness: 0.0001,
         modal: {
@@ -72,6 +74,8 @@
             that.enable();
         }
 
+        that.stickyIndexes = getStickyIndexes( that );
+
         return that;
     };
 
@@ -94,7 +98,6 @@
             }
 
             this.distroSelector = selector;
-            var parent = document.querySelector( selector );
 
             if (!document.querySelector( selector )) {
                 throw 'Error: You must pass a valid selector to linoleum.distribute.';
@@ -167,38 +170,51 @@
         sort: function( func ) {
 
             func = func || function() { return 0; };
+
+            var that = this;
             
-            this.beforeSort();
+            that.beforeSort();
             
-            var list = this.getTiles().sort( func );
+            var sticky = that.getSticky();
+            var tiles = that.getTiles().sort( func );
+
+            sticky.forEach(function( tile , i ) {
+                var index = that.stickyIndexes[i];
+                tiles.splice( index , 0 , tile );
+            });
             
-            $.extend( this , list );
+            $.extend( that , tiles );
             
-            this.afterSort();
+            that.afterSort();
         },
 
         filter: function( exclude ) {
             
             exclude = exclude || [];
 
-            this.beforeFilter();
+            var that = this;
 
-            this.forEach(function( tile ) {
+            that.beforeFilter();
+
+            that.forEach(function( tile ) {
+
+                if (tile.isSticky()) {
+                    return;
+                }
 
                 var i = tile.getIndex();
                 
                 if (exclude.indexOf( i ) >= 0) {
                     tile.exclude();
-                    this.onTileExclude( tile );
+                    that.onTileExclude( tile );
                 }
                 else if (!tile.isIncluded()) {
                     tile.include();
-                    this.onTileInclude( tile );
+                    that.onTileInclude( tile );
                 }
+            });
 
-            }.bind( this ));
-
-            this.afterFilter();
+            that.afterFilter();
         },
 
         count: function( countExcluded ) {
@@ -212,10 +228,23 @@
             return count;
         },
 
-        getTiles: function() {
+        getTiles: function( getSticky ) {
+            getSticky = (typeof getSticky !== 'undefined' ? getSticky : false);
             var list = [];
             this.forEach(function( tile ) {
-                list.push( tile );
+                if (!tile.isSticky() || getSticky) {
+                    list.push( tile );
+                }
+            });
+            return list;
+        },
+
+        getSticky: function() {
+            var list = [];
+            this.forEach(function( tile ) {
+                if (tile.isSticky()) {
+                    list.push( tile );
+                }
             });
             return list;
         },
@@ -335,6 +364,17 @@
         }
 
     };
+
+
+    function getStickyIndexes( instance ) {
+        var sticky = [];
+        instance.forEach(function( tile ) {
+            if (tile.isSticky()) {
+                sticky.push( tile.getIndex() );
+            }
+        });
+        return sticky;
+    }
 
 
     function _stack( instance , translate , options , callback ) {

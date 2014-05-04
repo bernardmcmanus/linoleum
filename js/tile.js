@@ -26,8 +26,10 @@
 
             this.dims = getDims( element );
 
-            element.style.webkitPerspective = this.perspective + 'px';
-            element.style.perspective = this.perspective + 'px';
+            $(element).css({
+                '-webkit-perspective': this.perspective + 'px',
+                'perspective': this.perspective + 'px'
+            });
 
             var front = $(element).find( '.face.front' ).get( 0 );
             var back = $(element).find( '.face.back' ).get( 0 );
@@ -77,6 +79,10 @@
 
         isIncluded: function() {
             return this.Include === true;
+        },
+
+        isSticky: function() {
+            return $(this).hasClass( this.stickyClass );
         },
 
         exclude: function() {
