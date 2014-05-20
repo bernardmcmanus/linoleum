@@ -361,8 +361,12 @@
             var totalY = getTotalY( this , this.Rows , options );
 
             $(parent).children( '.sizer' ).css( 'height' , totalY + 'px' );
-        }
+        },
 
+        destroy: function() {
+            this._stopListen( this.view );
+            this._stopListen( 'sizer' );
+        }
     };
 
 
