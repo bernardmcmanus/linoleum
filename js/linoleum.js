@@ -17,6 +17,7 @@
         distroDelay: 200,
         distroSelector: null,
         duration: 300,
+        setMinHeight: false,
         easing: 'ease'
     };
 
@@ -607,7 +608,9 @@
                 $(parent).children( '.sizer' ).css( 'min-height' , h + 'px' );
             }
 
-            size();
+            if (this.options.setMinHeight) {
+                size();
+            }
         }
     };
 
