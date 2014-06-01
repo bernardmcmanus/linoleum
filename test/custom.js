@@ -1,28 +1,55 @@
 (function() {
 
 
+	Linoleum.Tile.defineView( 'modal' , {
+
+		tile: function( tile ) {
+
+			//var containerBCR = document.querySelector( '#container' ).getBoundingClientRect();
+
+			return {
+				type: 'transform',
+				translate: {
+					x: ($(window).width() / 2) - (tile.bcr.width / 2) - awesome.containerBCR.left,
+					y: 200 + $(window).scrollTop()
+				}
+			};
+		},
+		
+		inner: {
+			type: 'transform',
+			scale2d: {x: 2.5, y: 2.5},
+			rotateY: 180
+		},
+
+		before: function( tile ) {
+			tile.activate();
+		}
+	});
+
+
 	var sortOrder = -1;
 
 	
 	addNumbers();
 
 	
-	var awesome = new linoleum( '.tile' , {
+	var awesome = new Linoleum( '.tile' , {
 		margin: {
             left: 5,
             right: 20,
             top: 40,
-            bottom: 40
-        },
-		duration: 400
+            bottom: 0
+        }
 	});
 
 	awesome.onTileExclude = function( tile ) {
-		$(tile).addClass( 'exclude' );
-	};
-
-	awesome.onTileInclude = function( tile ) {
-		$(tile).removeClass( 'exclude' );
+		if (tile.view !== 'home') {
+			tile.setView( 'home' , {
+				duration: 0
+			});
+			awesome.enable();
+		}
 	};
 
 	awesome.afterFilter = function() {
@@ -35,6 +62,8 @@
 
 	awesome.distribute( '#container' );
 
+	console.log(awesome);
+
 
 	$('#distribute').on( 'click' , function() {
 		awesome.distribute( '#container' , {} , function() {
@@ -42,37 +71,30 @@
 		});
 	});
 
-	$('#stack').on( 'click' , function() {
-
-		var position = {
-			x: 20,
-			y: 0
-		};
-
-		var options = {
-			easing: 'easeOutExpo'
-		};
-
-		awesome.stack( position , options , function() {
-			console.log('stacked.');
-		});
-	});
-
 	$('#filter').on( 'click' , function() {
-		var exclude = $('#filter-input').val().split( ',' ).map(function( a ) {
+		/*var exclude = $('#filter-input').val().split( ',' ).map(function( a ) {
 			return parseInt( a , 10 );
 		});
-		awesome.filter( exclude );
+		awesome.lFilter( exclude );*/
+
+		/*awesome.forEach(function( tile ) {
+			console.log(( tile.index / 2 ) === Math.round( tile.index / 2 ));
+		});*/
+
+		awesome.lFilter(function( tile ) {
+			return ( tile.index / 2 ) === Math.round( tile.index / 2 );
+		});
+
 	});
 
 	$('#sort').on( 'click' , function() {
 
-		awesome.sort(function( a , b ) {
+		awesome.lSort(function( a , b ) {
 			if (sortOrder > 0) {
-				return a.getIndex() - b.getIndex();
+				return a.index - b.index;
 			}
 			else {
-				return b.getIndex() - a.getIndex();
+				return b.index - a.index;
 			}
 		});
 
@@ -80,33 +102,21 @@
 	});
 
 	$('#clear').on( 'click' , function() {
-		awesome.filter( [] );
+		awesome.lFilter();
 	});
 
 	$('.tile').on( 'click' , function() {
-
-		var top = $('#container').position().top;
-		var y = top * 2;
-		
-		var options = {
-			duration: 300,
-			modal: {
-				y: $(window).scrollTop() < top ? ($(window).scrollTop() + y) : ($(window).scrollTop() + y - top),
-				z: 6500
-			}
-		};
 		
 		if (this.view === 'home') {
 
-			this.setView( 'modal' , options , function() {
+			this.setView( 'modal' , null , function() {
 				console.log('modal.');
 				awesome.disable();
-				console.log(this.getBoundingClientRect().top);
 			});
 		}
 		else {
 
-			this.setView( 'home' , options , function() {
+			this.setView( 'home' , null , function() {
 				console.log('home.');
 				awesome.enable();
 			});

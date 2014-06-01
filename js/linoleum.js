@@ -1,36 +1,31 @@
-(function() {
+(function( window ) {
 
-    var config = {
-        enabled: true,
+
+    var Config = {
         margin: {
             left: 10,
             right: 10,
             top: 10,
             bottom: 10
         },
-        stackPosition: {
-            x: 0,
-            y: 0
-        },
         indexAttribute: 'data-index',
         stickyClass: 'sticky',
+        excludeClass: 'exclude',
+        disableClass: 'disable',
+        activeClass: 'active',
         distroDelay: 200,
-        distroSelector: null,
-        duration: 300,
-        setMinHeight: false,
+        duration: 400,
         easing: 'ease'
     };
 
-    config.tile = {
-        indexAttribute: config.indexAttribute,
-        stickyClass: config.stickyClass,
+    Config.tile = {
+        indexAttribute: Config.indexAttribute,
+        stickyClass: Config.stickyClass,
+        excludeClass: Config.excludeClass,
+        disableClass: Config.disableClass,
+        activeClass: Config.activeClass,
         perspective: 10000,
-        thickness: 0.0001,
-        modal: {
-            x: null,
-            y: null,
-            z: 5000
-        }
+        thickness: 0.0001
     };
 
 
@@ -44,603 +39,451 @@
     };
 
 
-    window.linoleum = function( selector , options ) {
+    function Linoleum( selector , options ) {
 
         var els = document.querySelectorAll( selector );
 
         if (els.length < 1) {
-            throw 'Error: You must pass a valid selector to the linoleum constructor.';
+            throw new TypeError( 'Invalid selector.' );
         }
 
-        $.extend( this , callbacks );
-        this.options = $.extend( true , config , ( options || {} ));
-        this.listeners = {};
+        var that = this;
 
-        var tiles = [];
+        that.options = $.extend( true , Config , ( options || {} ));
+        that.cache = {};
+        that.enabled = true;
+        that.container = null;
+
+        $.extend( that , callbacks );
+
+        that.handleEvent = that._handleEvent.bind( that );
+        $(window).on( 'linoleum resize orientationchange' , that.handleEvent );
 
         Array.prototype.forEach.call( els , function( element , i ) {
-            tiles.push( new linoleum.tile( element , this.options.tile ));
-            var index = element.dataset[ this.options.indexAttribute ];
+
+            that.push(
+                new Linoleum.Tile( element , that.options.tile )
+            );
+            
+            var index = element.dataset[ that.options.indexAttribute ];
+            
             if (typeof index === 'undefined') {
-                element.setAttribute( this.options.indexAttribute , i );
+                element.setAttribute( that.options.indexAttribute , i );
             }
-        }.bind( this ));
 
-        var that = $.extend( tiles , this );
+        });
 
-        if (!that.options.enabled) {
-            that.disable();
+        Object.defineProperty( that , 'sticky' , {
+            get: function() {
+                return that.filter(function( tile ) {
+                    return tile.sticky;
+                })
+                .map(function( tile ) {
+                    return tile.index;
+                });
+            }
+        });
+
+        Object.defineProperty( that , 'included' , {
+            get: function() {
+                return that.reduce(function( p , c ) {
+                    p += (c.included ? 1 : 0);
+                    return p;
+                }, 0);
+            }
+        });
+
+        Object.defineProperty( that , 'totalWidth' , {
+            get: function() {
+                return that.reduce(function( p , c ) {
+                    p += (c.included ? c.bcr.width : 0);
+                    return p;
+                }, 0);
+            }
+        });
+
+        Object.defineProperty( that , 'marginX' , {
+            get: function() {
+                return that.options.margin.left + that.options.margin.right;
+            }
+        });
+
+        Object.defineProperty( that , 'totalX' , {
+            get: function() {
+                return that.totalWidth + (that.marginX * that.included);
+            }
+        });
+
+        Object.defineProperty( that , 'averageX' , {
+            get: function() {
+                return (that.totalX / that.included);
+            }
+        });
+
+        Object.defineProperty( that , 'totalHeight' , {
+            get: function() {
+                return that.getIncluded().reduce(function( p , c , i ) {
+                    p += (i < that.rows ? c.bcr.height : 0);
+                    return p;
+                }, 0);
+            }
+        });
+
+        Object.defineProperty( that , 'marginY' , {
+            get: function() {
+                return that.options.margin.top + that.options.margin.bottom;
+            }
+        });
+
+        Object.defineProperty( that , 'totalY' , {
+            get: function() {
+                return that.totalHeight + (that.marginY * that.rows);
+            }
+        });
+
+        Object.defineProperty( that , 'averageY' , {
+            get: function() {
+                return that.totalY / that.rows;
+            }
+        });
+
+        Object.defineProperty( that , 'containerBCR' , {
+            get: function() {
+                if (!that.container) {
+                    return {};
+                }
+                return that.container.getBoundingClientRect();
+            }
+        });
+
+        Object.defineProperty( that , 'columns' , {
+            get: function() {
+                if (!that.container) {
+                    return 0;
+                }
+                return Math.floor( that.containerBCR.width / that.averageX ) || 1;
+            }
+        });
+
+        Object.defineProperty( that , 'rows' , {
+            get: function() {
+                if (!that.container) {
+                    return 0;
+                }
+                return Math.ceil( that.included / that.columns );
+            }
+        });
+    }
+
+    
+    Linoleum.prototype = Object.create( Array.prototype );
+
+
+    Linoleum.prototype._handleEvent = function( e , data ) {
+
+        switch (e.type) {
+
+            case 'resize':
+            case 'orientationchange':
+                this._onViewportChangeEvent( e , data );
+            break;
         }
-        else {
-            that.enable();
+    };
+
+
+    Linoleum.prototype._updateCache = function() {
+        
+        var cache = this.cache;
+        
+        cache.columns = this.columns;
+        cache.rows = this.rows;
+    };
+
+
+    Linoleum.prototype._onViewportChangeEvent = function( e , data ) {
+
+        var that = this;
+        
+        if (that.view !== 'distribute') {
+            return;
         }
 
-        that.stickyIndexes = getStickyIndexes( that );
+        if ((that.columns === that.cache.columns) || !that.options.distroDelay) {
+            that.distribute( null , {} , null , 'zero' );
+            return;
+        }
+
+        that.rejectViewPromise = that.rejectViewPromise || function() {};
+        that.rejectViewPromise();
+
+        var viewPromise, viewPromiseTO;
+
+        viewPromise = new Promise(function( resolve , reject ) {
+            that.rejectViewPromise = reject;
+            viewPromiseTO = setTimeout( resolve , that.options.distroDelay );
+        });
+
+        viewPromise.then(function() {
+            that.distribute();
+        });
+
+        viewPromise.catch(function() {
+            clearTimeout( viewPromiseTO );
+        });
+    };
+
+
+    Linoleum.prototype.distribute = function( selector , options , callback , _method ) {
+
+        var that = this;
+        options = options || {};
+        callback = callback || function() {};
+
+        that.container = (selector ? document.querySelector( selector ) : that.container);
+        that.view = 'distribute';
+
+        if (!that.container) {
+            throw new TypeError( 'linoleum.distribute requires a container.' );
+        }
+
+        options = $.extend({
+            duration: that.options.duration,
+            easing: that.options.easing
+        } , options );
+
+        that.grid = defineGrid( that );
+
+        _distribute( that , options , _method , function() {
+            that._updateCache();
+            callback();
+        });
+
+        that.sizeSizer();
 
         return that;
     };
 
-    linoleum.prototype = {
 
-        distribute: function( selector , options , callback ) {
+    Linoleum.prototype.lSort = function( func ) {
 
-            selector = selector || this.distroSelector;
+        func = func || function() { return 0; };
 
-            if (!this._setView( 'distribute' )) {
-                return;
-            }
+        var that = this;
+        
+        that.beforeSort();
+        
+        var sticky = that.getSticky();
 
-            if (this.count( true ) < 1) {
-                return;
-            }
+        var tiles = that
+            .filter(function( tile ) {
+                return !tile.sticky;
+            })
+            .sort( func );
 
-            if (!selector || selector === '') {
-                throw 'Error: You must pass a valid selector to linoleum.distribute.';
-            }
+        sticky.forEach(function( tile , i ) {
+            var index = that.sticky[i];
+            tiles.splice( index , 0 , tile );
+        });
+        
+        $.extend( that , tiles );
+        
+        that.afterSort();
 
-            this.distroSelector = selector;
+        return that;
+    };
 
-            if (!document.querySelector( selector )) {
-                throw 'Error: You must pass a valid selector to linoleum.distribute.';
-            }
+    Linoleum.prototype.lFilter = function( func ) {
 
-            this._startListen( 'sizer' );
+        func = func || function() { return true; };
 
-            options = $.extend({
-                margin: this.options.margin,
-                duration: this.options.duration,
-                easing: this.options.easing
-            }, (options || {}));
+        var that = this;
 
-            var grid = _distribute( this , options , function() {
-                this.enable();
-                callback.call( this );
-            });
+        that.beforeFilter();
 
-            this.Columns = grid.Columns;
-            this.Rows = grid.Rows;
-            this.sizeSizer();
+        var sticky = that.getSticky();
 
-            return this;
-        },
+        var tiles = that
+            .filter(function( tile ) {
 
-        stack: function( position , options , callback ) {
-
-            if (!this._setView( 'stack' )) {
-                return;
-            }
-
-            this._stopListen( 'sizer' );
-
-            position = $.extend( config.stackPosition , (position || {}));
-
-            options = $.extend({
-                duration: this.options.duration,
-                easing: this.options.easing
-            }, (options || {}));
-
-            callback = callback || function() {};
-
-            var t = null;
-
-            for (var i = 0; i < this.count( true ); i++) {
-                if (this[i].view !== 'home') {
-                    t = i;
-                    break;
-                }
-            }
-
-            if (t !== null) {
-                this[t].setView( 'home' , options , function() {
-                    _stack( this , position , options , function() {
-                        //this.sizeSizer();
-                        callback.apply( this , arguments );
-                    });
-                }.bind( this ));
-            }
-            else {
-                _stack( this , position , options , function() {
-                    //this.sizeSizer();
-                    callback.apply( this , arguments );
-                });
-            }
-
-            return this;
-        },
-
-        sort: function( func ) {
-
-            func = func || function() { return 0; };
-
-            var that = this;
-            
-            that.beforeSort();
-            
-            var sticky = that.getSticky();
-            var tiles = that.getTiles().sort( func );
-
-            sticky.forEach(function( tile , i ) {
-                var index = that.stickyIndexes[i];
-                tiles.splice( index , 0 , tile );
-            });
-            
-            $.extend( that , tiles );
-            
-            that.afterSort();
-        },
-
-        filter: function( exclude ) {
-            
-            exclude = exclude || [];
-
-            var that = this;
-
-            that.beforeFilter();
-
-            that.forEach(function( tile ) {
-
-                if (tile.isSticky()) {
-                    return;
+                if (tile.sticky) {
+                    return false;
                 }
 
-                var i = tile.getIndex();
-                
-                if (exclude.indexOf( i ) >= 0) {
+                var result = func( tile );
+
+                if (!result) {
                     tile.exclude();
-                    that.onTileExclude( tile );
                 }
-                else if (!tile.isIncluded()) {
+                else {
                     tile.include();
-                    that.onTileInclude( tile );
                 }
-            });
 
-            that.afterFilter();
-        },
-
-        count: function( countExcluded ) {
-            countExcluded = (typeof countExcluded !== 'undefined' ? countExcluded : false);
-            var count = 0;
-            this.forEach(function( tile ) {
-                if (tile.isIncluded() || countExcluded) {
-                    count++;
-                }
-            });
-            return count;
-        },
-
-        getTiles: function( getSticky ) {
-            getSticky = (typeof getSticky !== 'undefined' ? getSticky : false);
-            var list = [];
-            this.forEach(function( tile ) {
-                if (!tile.isSticky() || getSticky) {
-                    list.push( tile );
-                }
-            });
-            return list;
-        },
-
-        getSticky: function() {
-            var list = [];
-            this.forEach(function( tile ) {
-                if (tile.isSticky()) {
-                    list.push( tile );
-                }
-            });
-            return list;
-        },
-
-        getIncluded: function() {
-            var list = [];
-            this.forEach(function( tile ) {
-                if (tile.isIncluded()) {
-                    list.push( tile );
-                }
-            });
-            return list;
-        },
-
-        getExcluded: function() {
-            var list = [];
-            this.forEach(function( tile ) {
-                if (!tile.isIncluded()) {
-                    list.push( tile );
-                }
-            });
-            return list;
-        },
-
-        _setView: function ( view ) {
-            
-            if (this.view === view) {
                 return true;
-            }
-
-            this._stopListen( this.view );
-
-            if (view === 'distribute') {
-                this._activate();
-            }
-            else {
-                this._deactivate();
-            }
-
-            this._startListen( view );
-            this.view = view;
-            
-            return true;
-        },
-
-        _startListen: function( type ) {
-
-            if (this.listeners[ type ] || typeof listeners[ type ] !== 'function') {
-                return;
-            }
-            
-            this.listeners[ type ] = listeners[ type ].bind( this );
-            startListen[ type ].call( this , this.listeners[ type ] );
-        },
-
-        _stopListen: function( type ) {
-
-            if (!type) {
-                return;
-            }
-            
-            if (!this.listeners[ type ] || typeof listeners[ type ] !== 'function') {
-                return;
-            }
-
-            stopListen[ type ].call( this , this.listeners[ type ] );
-            delete this.listeners[ type ];
-        },
-
-        isEnabled: function() {
-            return this.enabled === true;
-        },
-
-        enable: function() {
-            
-            this.forEach(function( tile ) {
-                tile.enable();
             });
-            
-            this.enabled = true;
-        },
 
-        disable: function( evenActive ) {
-            
-            this.forEach(function( tile ) {
-                if (!evenActive && $(tile).hasClass( 'active' )) {
-                    return;
-                }
-                tile.disable();
-            });
-            
-            this.enabled = false;
-        },
+        sticky.forEach(function( tile , i ) {
+            var index = that.sticky[i];
+            tiles.splice( index , 0 , tile );
+        });
+        
+        $.extend( that , tiles );
+        that.afterFilter();
+        return that;
+    };
 
-        _activate: function() {
-            $(this).css( 'pointer-events' , '' );
-        },
-
-        _deactivate: function() {
-            $(this).css( 'pointer-events' , 'none' );
-        },
-
-        sizeSizer: function( options ) {
-
-            if (typeof this.Rows === 'undefined') {
-                return;
-            }
-
-            options = $.extend({
-                margin: this.options.margin
-            } , ( options || {} ));
-
-            var parent = document.querySelector( this.distroSelector );
-            var totalY = getTotalY( this , this.Rows , options );
-
-            $(parent).children( '.sizer' ).css( 'height' , totalY + 'px' );
-        },
-
-        destroy: function() {
-            this._stopListen( this.view );
-            this._stopListen( 'sizer' );
-        }
+    
+    Linoleum.prototype.getSticky = function() {
+        return this.filter(function( tile ) {
+            return tile.sticky;
+        });
     };
 
 
-    function getStickyIndexes( instance ) {
-        var sticky = [];
-        instance.forEach(function( tile ) {
-            if (tile.isSticky()) {
-                sticky.push( tile.getIndex() );
-            }
+    Linoleum.prototype.getIncluded = function() {
+        return this.filter(function( tile ) {
+            return tile.included;
         });
-        return sticky;
-    }
+    };
 
 
-    function _stack( instance , translate , options , callback ) {
+    Linoleum.prototype.enable = function() {
+        this.forEach(function( tile ) {
+            tile.enable();
+        });
+        this.enabled = true;
+    };
 
-        var xformTile = $.extend({
-            type: 'transform',
-            translate: translate,
-        }, options );
 
-        var xformInner = $.extend({
-            type: 'transform',
-            rotate: {x: 1, a: 80}
-        }, options );
+    Linoleum.prototype.disable = function( evenActive ) {
+        this.forEach(function( tile ) {
+            if (!evenActive && tile.active) {
+                return;
+            }
+            tile.disable();
+        });
+        this.enabled = false;
+    };
 
-        var completed = 0;
 
-        function position( tile , resolve ) {
-            resolve = resolve || function() {};
-            $(tile).hx( xformTile );
-            $(tile).find( '.inner' )
-            .hx( xformInner )
-            .done( resolve );
-        }
+    Linoleum.prototype.sizeSizer = function( options ) {
+        $(this.container).children( '.sizer' ).css( 'height' , this.totalY + 'px' );
+    };
 
-        function exec() {
 
-            var targetSet = instance.getIncluded();
-            var promiseSet = [];
-            
-            targetSet.forEach(function( tile ) {
-                promiseSet.push(
-                    new Promise(function( resolve ) {
-                        position( tile , resolve );
-                    })
+    Linoleum.prototype.destroy = function() {
+        $(window).off( 'linoleum resize orientationchange' , this.handleEvent );
+    };
+
+
+    function defineGrid( instance ) {
+
+        var grid = [];
+        var i = 0;
+
+        for (var row = 0; row < instance.rows; row++) {
+
+            for (var col = 0; col < instance.columns; col++) {
+                
+                if (i >= instance.included) {
+                    break;
+                }
+
+                grid.push(
+                    getGridPosition( instance , instance[i] , row , col )
                 );
-            });
-            
-            Promise.all( promiseSet ).then( callback.bind( instance ));
+
+                i++;
+            }
         }
 
-        exec();
+        return grid;
+    }
+
+    function getGridPosition( instance , tile , row , col ) {
+        return {
+            x: (col * tile.bcr.width) + (instance.marginX * (col + 1)) + getCenterOffsetX( instance , tile ),
+            y: (row * tile.bcr.height) + (instance.options.margin.top * (row + 1)) + (instance.options.margin.bottom * row)
+        };
     }
 
 
-    function _distribute( instance , options , callback ) {
+    function _distribute( instance , options , method , callback ) {
 
-        callback = callback || function() {};
-        var parent = document.querySelector( instance.distroSelector );
-        var containerDims = parent.getBoundingClientRect();
-        var Columns = 0;
-        var Rows = 0;
-        var completed = 0;
+        instance.getIncluded().forEach(function( tile , i ) {
 
-        function position( tile , row , col , resolve ) {
+            var translate = instance.grid[i];
 
-            resolve = resolve || function() {};
+            tile.defineView( 'home' , createTileHomeView( translate ));
 
-            var ox = getCenterOffsetX( instance , tile , Columns , options );
+            if (tile.active) {
+                return;
+            }
 
-            var t = {
-                x: (col * tile.dims.width) + (options.margin.left * (col + 1)) + (options.margin.right * (col + 1)) + ox,
-                y: (row * tile.dims.height) + (options.margin.bottom * row) + (options.margin.top * (row + 1))
-            };
-
-            tile.setHome( t );
-
-            $(tile).hx({
+            var hxTile = {
                 type: 'transform',
-                translate: t,
+                translate: translate,
                 easing: options.easing,
                 duration: options.duration
-            });
+            };
 
-            $(tile).find( '.inner' ).hx({
+            var hxInner = {
                 type: 'transform',
                 rotate: null,
                 duration: options.duration,
                 easing: options.easing
-            })
-            .done( resolve );
-        }
+            };
 
-        function exec() {
-
-            var totalX = getTotalX( instance , options );
-            Columns = getCols( instance , totalX , containerDims );
-            Rows = getRows( instance , Columns );
-
-            var i = 0;
-            var targetSet = instance.getIncluded();
-            var promiseSet = [];
-
-
-            for (var row = 0; row < Rows; row++) {
-                for (var col = 0; col < Columns; col++) {
-                    
-                    if (i >= instance.count()) {
-                        continue;
-                    }
-                    
-                    promiseSet.push(
-                        new Promise(function( resolve ) {
-                            position( targetSet[i] , row , col , resolve );
-                        })
-                    );
-
-                    i++;
-                }
+            if (method === 'zero') {
+                $(tile).hx( 'zero' , hxTile );
+                $(tile).find( '.inner' ).hx( 'zero' , hxInner );
             }
+            else {
+                $(tile).hx( hxTile );
+                $(tile).find( '.inner' ).hx( hxInner );
+            }
+        });
 
-            Promise.all( promiseSet ).then( callback.bind( instance ));
+        if (method !== 'zero') {
+            var tiles = $.extend( [] , $(instance) );
+            var inners = $.extend( [] , $(instance).find( '.inner' ) );
+            $(tiles.concat( inners )).hx( 'done' , callback );
         }
+    }
 
-        exec();
 
+    function createTileHomeView( translate ) {
         return {
-            Columns: Columns,
-            Rows: Rows
+            tile: function( tile ) {
+                tile._hx.components.transform = [];
+                tile._hx.order.transform = [];
+                return {
+                    type: 'transform',
+                    translate: translate
+                };
+            },
+            inner: function( tile ) {
+                var inner = tile.querySelector( '.inner' );
+                inner._hx.components.transform = [];
+                inner._hx.order.transform = [];
+                return {
+                    type: 'transform'
+                };
+            },
+            after: function( tile ) {
+                tile.deactivate();
+            }
         };
     }
 
-    function getCenterOffsetX( instance , tile , cols , options ) {
-        var parent = document.querySelector( instance.distroSelector );
-        var parentDims = parent.getBoundingClientRect();
-        var marginX = options.margin.left + options.margin.right;
-        return (parentDims.width - (tile.dims.width * cols) - (marginX * (cols + 1))) / 2;
-    }
-
-    function getTotalX( instance , options ) {
-        var marginX = options.margin.left + options.margin.right;
-        return (instance[0].dims.width * instance.count()) + (marginX * (instance.count() + 1));
-    }
-
-    function getTotalY( instance , rows , options ) {
-        var marginY = options.margin.top + options.margin.bottom;
-        return (instance[0].dims.height * rows) + (marginY * (rows + 1));
-    }
-
-    function getInstanceX( instance , totalX ) {
-        return totalX / instance.count();
-    }
-
-    function getInstanceY( rows , totalY ) {
-        return totalY / rows;
-    }
-
-    function getRows( instance , cols ) {
-        return Math.ceil( instance.count() / cols );
-    }
-
-    function getCols( instance , totalX , containerDims ) {
-        
-        var instX = getInstanceX( instance , totalX );
-        var cols = 0;
-        
-        while ((cols * instX) < containerDims.width) {
-            cols++;
-        }
-
-        if ((cols * instX) > containerDims.width) {
-            cols -= 1;
-        }
-
-        return cols;
+    function getCenterOffsetX( instance , tile ) {
+        return (instance.containerBCR.width - (tile.bcr.width * instance.columns) - (instance.marginX * (instance.columns + 1))) / 2;
     }
 
 
-    var listeners = {
-
-        distribute: function( e ) {
-
-            var parent = document.querySelector( this.distroSelector );
-            var dims = parent.getBoundingClientRect();
-            
-            var totalX = getTotalX( this , this.options );
-            var cols = getCols( this , totalX , dims );
-            
-            if (this.Columns === cols) {
-                var opt = $.extend( {} , this.options , {
-                    duration: 0,
-                    fallback: false
-                });
-                _distribute( this , opt );
-                return;
-            }
-
-            var optionSet = null;
-
-            var handle = function() {
-                var grid = _distribute( this , optionSet );
-                this.Columns = grid.Columns;
-                this.Rows = grid.Rows;
-                this.sizeSizer();
-            }.bind( this );
-
-            if (this.options.distroDelay) {
-
-                optionSet = this.options;
-                var timeout = setTimeout( handle , this.options.distroDelay );
-
-                $(window).on( 'resize orientationchange' , function timer() {
-                    $(window).off( 'resize orientationchange' , timer );
-                    clearTimeout( timeout );
-                });
-            }
-            else {
-
-                optionSet = {
-                    duration: 0,
-                    fallback: false,
-                    margin: this.options.margin
-                };
-
-                $(window).on( 'resize orientationchange' , handle );
-            }
-        },
-
-        sizer: function( e ) {
-
-            var parent = document.querySelector( this.distroSelector );
-            var dims = parent.getBoundingClientRect();
-            var top = parseInt(getComputedStyle( parent ).top , 10 );
-
-            function size( h ) {
-                h = ((typeof h !== 'undefined' && typeof h !== 'object') ? h : ($(window).height() - dims.top - $(window).scrollTop()));
-                $(parent).children( '.sizer' ).css( 'min-height' , h + 'px' );
-            }
-
-            if (this.options.setMinHeight) {
-                size();
-            }
-        }
-    };
-
-
-    var startListen = {
-
-        distribute: function( listener ) {
-            $(window).on( 'resize orientationchange' , listener );
-        },
-
-        sizer: function( listener ) {
-            $(window).on( 'resize orientationchange' , listener );
-            listener();
-        }
-    };
-
-
-    var stopListen = {
-
-        distribute: function( listener ) {
-            $(window).off( 'resize orientationchange' , listener );
-        },
-
-        sizer: function( listener ) {
-            $(window).off( 'resize orientationchange' , listener );
-        }
-    };
+    window.Linoleum = Linoleum;
 
     
-}());
+}( window ));
 
 
 

@@ -49,13 +49,10 @@ body {
     top: 90px;
     width: 80%;
     border: 1px solid rgb(255,89,199);
-    overflow: hidden;
 }
 
 .sizer {
-    display: block;
-    width: 100%;
-    min-height: 200px;
+    display: inline-block;
 }
 
 .tile {

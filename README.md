@@ -1,4 +1,4 @@
-linoleum
+Linoleum
 ========
 
 #### Tiles for the 99%.
@@ -7,16 +7,16 @@ linoleum
 
 ### Dependencies
 
-Linoleum requires <a target="blank" href="https://github.com/elnarddogg/jquery.hx">jQuery.hx</a> version 1.0.0 or higher.
+Linoleum requires <a target="blank" href="https://github.com/elnarddogg/jquery.hx">jquery.hx</a> version 1.0.2 or higher.
 
 ========
 
 ### Instantiation
 
-A new linoleum instance is created as follows:
+A new Linoleum instance is created as follows:
 
 ```javascript
-var awesome = new linoleum( 'selector' , options );
+var awesome = new Linoleum( 'selector' , options );
 ```
 
 where `selector` is the selector string for the tile elements and `options` is an object setting the defaults for this instance.
@@ -25,48 +25,114 @@ where `selector` is the selector string for the tile elements and `options` is a
 
 ### Options
 
-Options can be passed to the linoleum constructor as well as method calls. Defaults are shown below.
+The Linoleum constructor accepts the following options (shown with default values):
 
 ```javascript
-enabled: true,
 margin: {
 	left: 10,
 	right: 10,
 	top: 10,
 	bottom: 10
 },
-stackPosition: {
-	x: 0,
-	y: 0
-},
+indexAttribute: 'data-index',
+stickyClass: 'sticky',
+excludeClass: 'exclude',
+disableClass: 'disable',
+activeClass: 'active',
 distroDelay: 200,
-duration: 300,
+duration: 400,
 easing: 'ease',
 tile: {
 	perspective: 10000,
-	thickness: 0.001,
-	modal: {
-		x: null,
-		y: null,
-		z: 5000
-	}
+	thickness: 0.0001,
 }
 ```
 
-* __enabled:__ enables setting of tile views
-* __margin:__ the tile margin for distributed view
-* __stackPosition:__ the position of the stacked view
-* __distroDelay:__ the amount of time to delay calling the distribute method on window resize or orientation change
-* __duration:__ the duration of linoleum transitions (i.e. distribute or stack)
-* __easing:__ the easing for linoleum transitions (i.e. distribute or stack)
-* __tile:__ defaults for the linoleum.tile instances
-* __tile.perspective:__ the perspective (in pixels) for a linoleum.tile instance
-* __tile.thickness:__ the thickness (as a percentage of perspective) for a linoleum.tile instance
-* __tile.modal:__ the translation distances (in pixels) for a linoleum.tile instance modal view (null = centered)
+| Parameter | Description | Type |
+| --------- | ----------- | ---- |
+| __margin__ | the tile margin for distributed view | `Object` |
+| __indexAttribute__ | the name of the DOM attribute where the tile's index should be stored | `String` |
+| __stickyClass__ | the name of the class designating sticky tiles | `String` |
+| __excludeClass__ | the name of the class designating excluded tiles | `String` |
+| __disableClass__ | the name of the class designating disabled tiles | `String` |
+| __activeClass__ | the name of the class designating active tiles | `String` |
+| __distroDelay__ | the amount of time to delay calling the distribute method on window resize or orientation change | `Integer` |
+| __duration__ | the duration of linoleum transitions (i.e. distribute) | `Integer` |
+| __easing__ | the easing for linoleum transitions (i.e. distribute) | `String` |
+| __tile.perspective__ | the perspective (in pixels) for a linoleum.tile instance | `Integer` |
+| __tile.thickness__ | the thickness (as a percentage of perspective) for a linoleum.tile instance | `Float` |
 
 ========
 
-### Methods
+### Callbacks
+
+#### linoleum.onTileInclude
+```javascript
+awesome.onTileInclude = function( tile ) { ... };
+```
+
+#### linoleum.onTileExclude
+```javascript
+awesome.onTileExclude = function( tile ) { ... };
+```
+
+#### linoleum.beforeFilter
+```javascript
+awesome.beforeFilter = function() { ... };
+```
+
+#### linoleum.afterFilter
+```javascript
+awesome.afterFilter = function() { ... };
+```
+
+#### linoleum.beforeSort
+```javascript
+awesome.beforeSort = function() { ... };
+```
+
+#### linoleum.afterSort
+```javascript
+awesome.afterSort = function() { ... };
+```
+
+========
+
+### Linoleum Methods
+
+Linoleum extends the Array object, so any methods available to an array are available to Linoleum.
+
+#### linoleum.distribute
+
+```javascript
+awesome.distribute( 'selector' , options , callback );
+```
+
+| Parameter | Description | Required | Type |
+| --------- | ----------- | -------- | ---- |
+| __selector__ | the selector for the container to which the tiles should be distributed. Once distribute has been called, selector is no longer required. | _Once_ | `String` |
+| __options__ | accepts `duration` and `easing` | No | `Object` |
+| __callback__ | a function to be executed upon completion | No | `Function` |
+
+#### linoleum.lSort
+
+```javascript
+awesome.lSort( sortFunction );
+```
+
+| Parameter | Description | Required | Type |
+| --------- | ----------- | -------- | ---- |
+| __sortFunction__ | the sort function | __Yes__ | `Function` |
+
+#### linoleum.lFilter
+
+```javascript
+awesome.lFilter( filterFunction );
+```
+
+| Parameter | Description | Required | Type |
+| --------- | ----------- | -------- | ---- |
+| __filterFunction__ | the filter function | No | `Function` |
 
 #### linoleum.enable
 
@@ -80,48 +146,120 @@ awesome.enable();
 awesome.disable( evenActive );
 ```
 
-* __evenActive:__ Optional - a boolean denoting whether the active tile, if any, should be disabled.
+| Parameter | Description | Required | Type |
+| --------- | ----------- | -------- | ---- |
+| __evenActive__ | denotes whether the active tile, if any, should be disabled | No | `Boolean` |
 
-#### linoleum.distribute
+========
 
-```javascript
-awesome.distribute( 'selector' , options , callback );
-```
+### Tile Methods
 
-* __selector:__ __Required__ - the selector string for the container to which the tiles should be distributed.
-* __options:__ Optional - options for the linoleum.distribute method. Accepts _margin_, _duration_, and _easing_.
-* __callback:__ Optional - a function to be executed upon completion.
 
-#### linoleum.stack
+#### Linoleum.Tile.defineView
 
-```javascript
-awesome.stack( stackPosition , options , callback );
-```
-
-* __stackPosition:__ Optional - an object containing the position of the stack relative to the top left corner of the tiles' parent.
-* __options:__ Optional - options for the linoleum.stack method. Accepts _duration_ and _easing_.
-* __callback:__ Optional - a function to be executed upon completion.
-
-#### linoleum.tile.enable
+* defines a view for __ALL__ tiles in __ALL__ Linoleum instances.
 
 ```javascript
-awesome[i].enable();
+Linoleum.Tile.defineView( 'modal' , {
+
+	tile: function( tile ) {
+		return {
+			type: 'transform',
+			translate: {
+				x: ($(window).width() / 2) - ($(tile).width() / 2),
+				y: 100 + $(window).scrollTop()
+			}
+		}
+	},
+
+	inner: {
+		type: 'transform',
+		rotateY: 180
+	},
+
+	before: function() {
+		...
+	},
+
+	after: function() {
+		...
+	}
+});
 ```
 
-#### linoleum.tile.disable
+| Parameter | Description | Required | Type |
+| --------- | ----------- | -------- | ---- |
+| __name__ | the name of the view to be created | __Yes__ | `String` |
+| __viewDef__ | an object defining the new view | __Yes__ | `Object` |
+| __viewDef.tile__ | <a target="blank" href="https://github.com/elnarddogg/jquery.hx#beans--pods">jquery.hx transform object</a> or a function that returns one defining the transformation for the tile element | no | `Object`<br>`Array`<br>`Function` |
+| __viewDef.inner__ | <a target="blank" href="https://github.com/elnarddogg/jquery.hx#beans--pods">jquery.hx transform object</a> or a function that returns one defining the transformation for the inner element | no | `Object`<br>`Array`<br>`Function` |
+| __viewDef.before__ | a function to be executed before the view is applied | no | `Function` |
+| __viewDef.after__ | a function to be executed after the view is applied | no | `Function` |
+
+#### tile.defineView
+
+* same as above, but for a single tile instance.
 
 ```javascript
-awesome[i].disable();
+Linoleum.Tile.defineView( 'name' , viewDef );
 ```
 
-#### linoleum.tile.setView
+#### tile.setView
 
 ```javascript
 awesome[i].setView( view , options , callback );
 ```
 
-* __view:__ __Required__ - a string denoting the desired view. Valid views are `home` and `modal`.
-* __options:__ Optional - options for the linoleum.tile.setView method. Accepts _modal_, _duration_, and _easing_.
-* __callback:__ Optional - a function to be executed upon completion.
+| Parameter | Description | Required | Type |
+| --------- | ----------- | -------- | ---- |
+| __view__ | the desired view - by default, the only valid view is `home` | __Yes__ | `String` |
+| __options__ | accepts `duration` and `easing` | No | `Object` |
+| __callback__ | a function to be executed upon completion | No | `Function` |
 
+#### tile.stick
 
+```javascript
+awesome[i].stick();
+```
+
+#### tile.unstick
+
+```javascript
+awesome[i].unstick();
+```
+
+#### tile.enable
+
+```javascript
+awesome[i].enable();
+```
+
+#### tile.disable
+
+```javascript
+awesome[i].disable();
+```
+
+#### tile.include
+
+```javascript
+awesome[i].include();
+```
+
+#### tile.exclude
+
+```javascript
+awesome[i].exclude();
+```
+
+#### tile.activate
+
+```javascript
+awesome[i].activate();
+```
+
+#### tile.deactivate
+
+```javascript
+awesome[i].deactivate();
+```

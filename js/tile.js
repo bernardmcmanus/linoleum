@@ -1,257 +1,246 @@
-(function( linoleum ) {
+(function( Linoleum ) {
 
 
-    var config = {
-        enabled: true,
-        view: 'home',
-        home: {},
-        Include: true
+    var Static = {
+        views: {},
+        hxViewKeys: [ 'tile' , 'inner' ]
     };
 
 
-    var tile = function( element , options ) {
+    function Config() {
+        this.view = 'home';
+        this.views = {};
+    }
 
-        if (!element) {
-            throw 'Error: You must pass an element to the linoleum.tile constructor.';
-        }
 
-        $.extend( this , config , options );
+    function Tile( element , options ) {
 
-        return this._init( element );
+        $.extend( this , new Config() , ( options || {} ));
+
+        var that = init( this , element );
+
+        Object.defineProperty( that , 'index' , {
+            get: function() {
+                var attribute = that.indexAttribute.replace( /data\-/ , '' );
+                return parseInt( that.dataset[attribute] , 10 );
+            }
+        });
+
+        Object.defineProperty( that , 'sticky' , {
+            get: function() {
+                return $(that).hasClass( that.stickyClass );
+            }
+        });
+
+        Object.defineProperty( that , 'active' , {
+            get: function() {
+                return $(that).hasClass( that.activeClass );
+            }
+        });
+
+        Object.defineProperty( that , 'included' , {
+            get: function() {
+                return !$(that).hasClass( that.excludeClass );
+            }
+        });
+
+        Object.defineProperty( that , 'enabled' , {
+            get: function() {
+                return !$(that).hasClass( that.disableClass );
+            }
+        });
+
+        return that;
+    }
+
+    
+    Tile.defineView = function( name , components ) {
+        Static.views[name] = new View( components );
     };
 
-    tile.prototype = {
 
-        _init: function( element ) {
+    Tile.prototype = {
 
-            this.dims = getDims( element );
-
-            $(element).css({
-                '-webkit-perspective': this.perspective + 'px',
-                'perspective': this.perspective + 'px'
-            });
-
-            var front = $(element).find( '.face.front' ).get( 0 );
-            var back = $(element).find( '.face.back' ).get( 0 );
-
-            var tz = (this.thickness * this.perspective) / 1;
-
-            setDepth( front , tz );
-            setDepth( back , -tz , 180 );
-
-            return $.extend( element , this );
+        defineView: function( name , components ) {
+            this.views[name] = new View( components );
         },
 
-        setView: function ( view , options , callback ) {
+        setView: function ( name , options , callback ) {
 
-            if (this.view === view || !this.enabled) {
+            if (this.view === name || !this.enabled) {
                 return;
             }
 
-            if (typeof views[view] !== 'function') {
-                throw 'Error: linoleum.tile has no view \'' + view + '\'.';
+            var compiledView = getCompiledView( this , name , options );
+
+            if (!compiledView) {
+                throw new TypeError( 'linoleum.tile has no view \'' + name + '\'.' );
             }
 
-            callback = callback || function() {};
-
-            var viewInfo = setView.call( this , view , options );
-            viewInfo.callback = viewInfo.callback || function() {};
-
-            $(this)
-            .hx( viewInfo.xform.tile );
-            
-            $(this).find( '.inner' )
-            .hx( viewInfo.xform.inner )
-            .done(function() {
-                this.view = view;
-                viewInfo.callback.call( this );
-                callback.call( this );
-            }.bind( this ));
+            applyView( this , name , compiledView , callback );
         },
 
-        setHome: function( xform ) {
-            this.home = xform;
+        stick: function() {
+            $(this).addClass( this.stickyClass );
         },
 
-        isEnabled: function() {
-            return this.enabled === true;
-        },
-
-        isIncluded: function() {
-            return this.Include === true;
-        },
-
-        isSticky: function() {
-            return $(this).hasClass( this.stickyClass );
-        },
-
-        exclude: function() {
-            this.Include = false;
-            this.disable();
-        },
-
-        include: function() {
-            this.Include = true;
-            this.enable();
-        },
-
-        getIndex: function() {
-            var attribute = this.indexAttribute.replace( /data\-/ , '' );
-            return parseInt( this.dataset[attribute] , 10 );
+        unstick: function() {
+            $(this).removeClass( this.stickyClass );
         },
 
         enable: function() {
-            if (!this.isIncluded()) {
-                return;
-            }
-            this.enabled = true;
-            $(this).css( 'pointer-events' , '' );
+            $(this).removeClass( this.disableClass );
         },
 
-        disable: function( all ) {
-            this.enabled = false;
-            $(this).css( 'pointer-events' , 'none' );
+        disable: function() {
+            $(this).addClass( this.disableClass );
         },
 
-        _activate: function() {
-            $(this).addClass( 'active' );
+        include: function() {
+            $(this).removeClass( this.excludeClass );
         },
 
-        _deactivate: function() {
-            $(this).removeClass( 'active' );
+        exclude: function() {
+            $(this).addClass( this.excludeClass );
         },
 
+        activate: function() {
+            $(this).addClass( this.activeClass );
+        },
+
+        deactivate: function() {
+            $(this).removeClass( this.activeClass );
+        }
     };
 
 
-    function getDims( element ) {
-        var r = element.getBoundingClientRect();
-        var dims = {
+    function init( instance , element ) {
+
+        instance.bcr = getAdjustedBCR( element );
+
+        $(element).css({
+            '-webkit-perspective': instance.perspective + 'px',
+            'perspective': instance.perspective + 'px'
+        });
+
+        var front = $(element).find( '.face.front' ).get( 0 );
+        var back = $(element).find( '.face.back' ).get( 0 );
+
+        var tz = (instance.thickness * instance.perspective);
+
+        setDepth( front , tz );
+        setDepth( back , -tz , 180 );
+
+        return $.extend( element , instance );
+    }
+
+
+    function getAdjustedBCR( element ) {
+        var bcr = element.getBoundingClientRect();
+        var adjusted = {
             width: parseInt(getComputedStyle( element ).width , 10 ),
             height: parseInt(getComputedStyle( element ).height , 10 ),
-            left: r.left,
-            top: r.top
+            left: bcr.left,
+            top: bcr.top
         };
-        dims.right = dims.left + dims.width;
-        dims.bottom = dims.top + dims.height;
-        return dims;
+        adjusted.right = adjusted.left + adjusted.width;
+        adjusted.bottom = adjusted.top + adjusted.height;
+        return adjusted;
     }
 
 
     function setDepth( element , z , r ) {
-
         $(element).hx({
             type: 'transform',
             translate: {z: z},
-            rotateY: (r || null),
+            rotateY: r,
             duration: 0,
             fallback: false
         });
     }
 
 
-    function setView( view , options ) {
+    function getCompiledView( instance , name , options ) {
+
+        var viewDefinition = instance.views[name] || Static.views[name];
+
+        if (!viewDefinition) {
+            return false;
+        }
 
         options = options || {};
 
-        var viewInfo = views[view].call( this , options );
+        var compiledView = $.extend( {} , viewDefinition );
 
-        delete options.modal;
+        Static.hxViewKeys.forEach(function( key ) {
 
-        viewInfo.xform.tile = $.extend( viewInfo.xform.tile , options );
-        viewInfo.xform.inner = $.extend( viewInfo.xform.inner , options );
+            var viewComponent = compiledView[key];
 
-        return viewInfo;
+            if (typeof viewComponent === 'function') {
+                viewComponent = viewComponent( instance );
+            }
+
+            if (!Array.isArray( viewComponent )) {
+                viewComponent = [ viewComponent ];
+            }
+
+            viewComponent.forEach(function( bean ) {
+                $.extend( bean , options );
+            });
+
+            compiledView[key] = viewComponent;
+        });
+
+        return compiledView;
     }
 
 
-    function getModalPosition( containerDims , modal ) {
+    function applyView( instance , name , compiledView , callback ) {
 
-        var pos = {x: 0, y: 0};
+        callback = callback || function() {};
 
-        if (!containerDims) {
-            return pos;
-        }
+        var tile = instance;
+        var inner = instance.querySelector( '.inner' );
 
-        modal = $.extend( this.modal , (modal || {}) );
+        compiledView.before( instance );
 
-        pos.x = modal.x !== null ? modal.x : (containerDims.width / 2) - (this.dims.width / 2);
-        pos.y = modal.y !== null ? modal.y : (($(window).height() / 2) - containerDims.top) - (this.dims.height / 2);
+        $(tile).hx( compiledView.tile );
+        $(inner).hx( compiledView.inner );
 
-        return pos;
+        $([ tile , inner ]).hx( 'done' , function() {
+            instance.view = name;
+            compiledView.after( instance );
+            callback();
+        });
     }
 
 
-    var views = {
+    function View( components ) {
 
-        home: function( options ) {
+        this.tile = function() {
+            return {type: 'transform'};
+        };
 
-            function callback() {
-                this._deactivate();
-            }
+        this.inner = function() {
+            return {type: 'transform'};
+        };
 
-            var tile = {
-                type: 'transform',
-                translate: this.home
-            };
+        this.before = function() {
 
-            var inner = {
-                type: 'transform',
-                translate: null,
-                rotate: null
-            };
+        };
 
-            return {
-                callback: callback,
-                xform: {
-                    tile: tile,
-                    inner: inner
-                }
-            };
-        },
+        this.after = function() {
 
-        modal: function( options ) {
+        };
 
-            options = options || {};
-
-            var dims = this.parentNode.getBoundingClientRect();
-            var t = getModalPosition.call( this , dims , options.modal );
-            
-            var tile = {
-                type: 'transform',
-                translate: t
-            };
-
-            var modalZ = this.modal.z;
-
-            if (typeof options.modal !== 'undefined' && typeof options.modal.z !== 'undefined') {
-                modalZ = options.modal.z;
-            }
-
-            var inner = {
-                type: 'transform',
-                translate: {
-                    z: modalZ
-                },
-                rotate: {y: 1, a: 180}
-            };
-
-            this._activate();
-
-            return {
-                xform: {
-                    tile: tile,
-                    inner: inner
-                }
-            };
-        }
-    };
+        $.extend( this , components );
+    }
 
 
-    $.extend( linoleum , {tile: tile} );
+    $.extend( Linoleum , { Tile: Tile });
 
     
-}( linoleum ));
+}( Linoleum ));
 
 
 
