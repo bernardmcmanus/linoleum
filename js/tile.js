@@ -23,25 +23,29 @@
             get: function() {
                 var attribute = that.indexAttribute.replace( /data\-/ , '' );
                 return parseInt( that.dataset[attribute] , 10 );
-            }
+            },
+            configurable: true
         });
 
         Object.defineProperty( that , 'sticky' , {
             get: function() {
                 return $(that).hasClass( that.stickyClass );
-            }
+            },
+            configurable: true
         });
 
         Object.defineProperty( that , 'active' , {
             get: function() {
                 return $(that).hasClass( that.activeClass );
-            }
+            },
+            configurable: true
         });
 
         Object.defineProperty( that , 'included' , {
             get: function() {
                 return !$(that).hasClass( that.excludeClass );
-            }
+            },
+            configurable: true
         });
 
         Object.defineProperty( that , 'enabled' , {
