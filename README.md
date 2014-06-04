@@ -98,6 +98,17 @@ awesome.afterSort = function() { ... };
 
 ========
 
+### Events
+
+#### linoleum.distribute
+```javascript
+$(document).on( 'linoleum.distribute' , function( e , data ) {
+	...
+});
+```
+
+========
+
 ### Linoleum Methods
 
 Linoleum extends the Array object, so any methods available to an array are available to Linoleum.

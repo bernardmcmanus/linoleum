@@ -39,6 +39,11 @@
 	});
 
 
+	$(document).on( 'linoleum.distribute' , function( e , data ) {
+		console.log(arguments);
+	});
+
+
 	var sortOrder = -1;
 	
 	var awesome = createLinoleum();

@@ -254,6 +254,14 @@
         that.grid = defineGrid( that );
 
         _distribute( that , options , _method , function() {
+
+            if (_method !== 'zero') {
+                $(document).trigger( 'linoleum.distribute' , {
+                    rows: that.rows,
+                    columns: that.columns
+                });
+            }
+
             that._updateCache();
             callback();
         });
