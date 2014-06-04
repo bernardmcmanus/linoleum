@@ -51,7 +51,8 @@
         Object.defineProperty( that , 'enabled' , {
             get: function() {
                 return !$(that).hasClass( that.disableClass );
-            }
+            },
+            configurable: true
         });
 
         return that;

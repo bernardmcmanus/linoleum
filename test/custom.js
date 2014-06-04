@@ -1,11 +1,22 @@
 (function() {
 
 
+	var tileCount = 0;
+
+
+	for (var i = 0; i < 10; i++) {
+		tileCount++;
+		var tile = createTile( tileCount );
+		if (i === 0) {
+			$(tile).addClass( 'sticky' );
+		}
+		$('#container').append( tile );
+	}
+
+
 	Linoleum.Tile.defineView( 'modal' , {
 
 		tile: function( tile ) {
-
-			//var containerBCR = document.querySelector( '#container' ).getBoundingClientRect();
 
 			return {
 				type: 'transform',
@@ -29,40 +40,100 @@
 
 
 	var sortOrder = -1;
-
 	
-	addNumbers();
+	var awesome = createLinoleum();
 
-	
-	var awesome = new Linoleum( '.tile' , {
-		margin: {
-            left: 5,
-            right: 20,
-            top: 40,
-            bottom: 0
-        }
-	});
-
-	awesome.onTileExclude = function( tile ) {
-		if (tile.view !== 'home') {
-			tile.setView( 'home' , {
-				duration: 0
-			});
-			awesome.enable();
-		}
-	};
-
-	awesome.afterFilter = function() {
-		this.distribute();
-	};
-
-	awesome.afterSort = function() {
-		this.distribute();
-	};
-
-	awesome.distribute( '#container' );
+	initLinoleum();
 
 	console.log(awesome);
+
+
+	function createLinoleum() {
+		return new Linoleum( '.tile.instance' , {
+			margin: {
+	            left: 5,
+	            right: 20,
+	            top: 40,
+	            bottom: 0
+	        }
+		});
+	}
+
+
+	function initLinoleum() {
+
+		awesome.lSort(function( a , b ) {
+			if (sortOrder > 0) {
+				return a.index - b.index;
+			}
+			else {
+				return b.index - a.index;
+			}
+		});
+
+		awesome.onTileExclude = function( tile ) {
+			if (tile.view !== 'home') {
+				tile.setView( 'home' , {
+					duration: 0
+				});
+				awesome.enable();
+			}
+		};
+
+		awesome.afterFilter = function() {
+			awesome.distribute();
+		};
+
+		awesome.afterSort = function() {
+			awesome.distribute();
+		};
+
+		awesome.distribute( '#container' );
+
+		initTiles();
+	}
+
+
+	function createTile( number ) {
+		var tile = document.querySelector( '.templates .tile' ).cloneNode( true );
+		$(tile)
+		.addClass( 'instance' )
+		.find( '.inner' ).children().html( number );
+		return tile;
+	}
+
+
+	function initTiles() {
+
+		$('.tile.instance').off( 'click' ).on( 'click' , function() {
+			
+			if (this.view === 'home') {
+
+				this.setView( 'modal' , null , function() {
+					console.log('modal.');
+					awesome.disable();
+				});
+			}
+			else {
+
+				this.setView( 'home' , null , function() {
+					console.log('home.');
+					awesome.enable();
+				});
+			}
+
+		});
+	}
+
+
+	$('#add').on( 'click' , function() {
+		awesome.destroy();
+		tileCount++;
+		var tile = createTile( tileCount );
+		$('#container').append( tile );
+		awesome = createLinoleum();
+		initLinoleum();
+	});
 
 
 	$('#distribute').on( 'click' , function() {
@@ -71,22 +142,15 @@
 		});
 	});
 
-	$('#filter').on( 'click' , function() {
-		/*var exclude = $('#filter-input').val().split( ',' ).map(function( a ) {
-			return parseInt( a , 10 );
-		});
-		awesome.lFilter( exclude );*/
 
-		/*awesome.forEach(function( tile ) {
-			console.log(( tile.index / 2 ) === Math.round( tile.index / 2 ));
-		});*/
+	$('#filter').on( 'click' , function() {
 
 		awesome.lFilter(function( tile ) {
 			return ( tile.index / 2 ) === Math.round( tile.index / 2 );
 		});
-
 	});
 
+	
 	$('#sort').on( 'click' , function() {
 
 		awesome.lSort(function( a , b ) {
@@ -101,35 +165,10 @@
 		sortOrder = (sortOrder < 0 ? 1 : -1);
 	});
 
+	
 	$('#clear').on( 'click' , function() {
 		awesome.lFilter();
 	});
-
-	$('.tile').on( 'click' , function() {
-		
-		if (this.view === 'home') {
-
-			this.setView( 'modal' , null , function() {
-				console.log('modal.');
-				awesome.disable();
-			});
-		}
-		else {
-
-			this.setView( 'home' , null , function() {
-				console.log('home.');
-				awesome.enable();
-			});
-		}
-
-	});
-
-	function addNumbers() {
-		$('.tile').each(function( i ) {
-			var n = i + 1;
-			$(this).find( '.inner' ).children().html( n );
-		});
-	}
 
 }());
 
