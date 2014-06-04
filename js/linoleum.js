@@ -452,9 +452,9 @@
         });
 
         if (method !== 'zero') {
-            var tiles = $.extend( [] , $(instance) );
-            var inners = $.extend( [] , $(instance).find( '.inner' ) );
-            $(tiles.concat( inners )).hx( 'done' , callback );
+            //var tiles = $.extend( [] , $(instance) );
+            //var inners = $.extend( [] , $(instance).find( '.inner' ) );
+            $(instance).hx( 'done' , callback );
         }
     }
 
