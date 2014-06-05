@@ -260,9 +260,9 @@
                     rows: that.rows,
                     columns: that.columns
                 });
+                that._updateCache();
             }
-
-            that._updateCache();
+            
             callback();
         });
 
