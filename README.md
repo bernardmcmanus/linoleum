@@ -100,6 +100,13 @@ awesome.afterSort = function() { ... };
 
 ### Events
 
+#### linoleum.resize
+```javascript
+$(document).on( 'linoleum.resize' , function( e , data ) {
+	...
+});
+```
+
 #### linoleum.distribute
 ```javascript
 $(document).on( 'linoleum.distribute' , function( e , data ) {

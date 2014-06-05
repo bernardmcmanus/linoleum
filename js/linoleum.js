@@ -64,9 +64,9 @@
             that.push(
                 new Linoleum.Tile( element , that.options.tile )
             );
-            
+
             var index = element.dataset[ that.options.indexAttribute ];
-            
+
             if (typeof index === 'undefined') {
                 element.setAttribute( that.options.indexAttribute , i );
             }
@@ -175,7 +175,7 @@
         });
     }
 
-    
+
     Linoleum.prototype = Object.create( Array.prototype );
 
 
@@ -192,9 +192,9 @@
 
 
     Linoleum.prototype._updateCache = function() {
-        
+
         var cache = this.cache;
-        
+
         cache.columns = this.columns;
         cache.rows = this.rows;
     };
@@ -203,7 +203,7 @@
     Linoleum.prototype._onViewportChangeEvent = function( e , data ) {
 
         var that = this;
-        
+
         if (that.view !== 'distribute') {
             return;
         }
@@ -266,7 +266,7 @@
             callback();
         });
 
-        that.sizeSizer();
+        that.resize();
 
         return that;
     };
@@ -277,9 +277,9 @@
         func = func || function() { return 0; };
 
         var that = this;
-        
+
         that.beforeSort();
-        
+
         var sticky = that.getSticky();
 
         var tiles = that
@@ -292,9 +292,9 @@
             var index = that.sticky[i];
             tiles.splice( index , 0 , tile );
         });
-        
+
         $.extend( that , tiles );
-        
+
         that.afterSort();
 
         return that;
@@ -333,13 +333,13 @@
             var index = that.sticky[i];
             tiles.splice( index , 0 , tile );
         });
-        
+
         $.extend( that , tiles );
         that.afterFilter();
         return that;
     };
 
-    
+
     Linoleum.prototype.getSticky = function() {
         return this.filter(function( tile ) {
             return tile.sticky;
@@ -373,8 +373,18 @@
     };
 
 
-    Linoleum.prototype.sizeSizer = function( options ) {
+    Linoleum.prototype.resize = function( options ) {
+
+        if ($(this.container).children( '.sizer' ).height() === this.totalY) {
+            return;
+        }
+
         $(this.container).children( '.sizer' ).css( 'height' , this.totalY + 'px' );
+
+        $(document).trigger( 'linoleum.resize' , {
+            rows: this.rows,
+            columns: this.columns
+        });
     };
 
 
@@ -391,7 +401,7 @@
         for (var row = 0; row < instance.rows; row++) {
 
             for (var col = 0; col < instance.columns; col++) {
-                
+
                 if (i >= instance.included) {
                     break;
                 }
@@ -490,33 +500,5 @@
 
     window.Linoleum = Linoleum;
 
-    
+
 }( window ));
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -26,7 +26,7 @@
 				}
 			};
 		},
-		
+
 		inner: {
 			type: 'transform',
 			scale2d: {x: 2.5, y: 2.5},
@@ -39,18 +39,18 @@
 	});
 
 
-	$(document).on( 'linoleum.distribute' , function( e , data ) {
-		console.log(arguments);
-	});
-
-
 	var sortOrder = -1;
-	
+
 	var awesome = createLinoleum();
 
 	initLinoleum();
 
 	console.log(awesome);
+
+
+	$(window).on( 'linoleum.resize' , function( e , data ) {
+		console.log(e);
+	});
 
 
 	function createLinoleum() {
@@ -111,7 +111,7 @@
 	function initTiles() {
 
 		$('.tile.instance').off( 'click' ).on( 'click' , function() {
-			
+
 			if (this.view === 'home') {
 
 				this.setView( 'modal' , null , function() {
@@ -155,7 +155,7 @@
 		});
 	});
 
-	
+
 	$('#sort').on( 'click' , function() {
 
 		awesome.lSort(function( a , b ) {
@@ -170,32 +170,9 @@
 		sortOrder = (sortOrder < 0 ? 1 : -1);
 	});
 
-	
+
 	$('#clear').on( 'click' , function() {
 		awesome.lFilter();
 	});
 
 }());
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
