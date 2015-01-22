@@ -1,0 +1,25 @@
+{
+  "name": "linoleum",
+  "version": "0.3.0",
+  "homepage": "https://github.com/elnarddogg/linoleum.git",
+  "authors": [
+    "Bernard McManus"
+  ],
+  "description": "tiles for the 99%",
+  "main": "linoleum-0.3.0.min.js",
+  "keywords": [
+    "javascript",
+    "tiles",
+    "jquery.hx",
+    "animation",
+    "ui"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}

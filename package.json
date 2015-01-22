@@ -1,19 +1,42 @@
 {
-    "name": "linoleum.js",
-    "description": "Tiles for the 99%.",
-    "version": "0.2.0",
-    "author": "Bernard McManus",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/elnarddogg/linoleum.git"
-    },
-    "devDependencies": {
-        "grunt": "~0.4.2",
-        "grunt-contrib-jshint": "~0.6.3",
-        "grunt-contrib-concat": ">=0.4.0",
-        "grunt-contrib-uglify": ">=0.2.2",
-        "grunt-contrib-clean": ">=0.4.1",
-        "grunt-replace": ">=0.7.7",
-        "grunt-contrib-watch": ">=0.6.1"
-    }
+  "name": "linoleum",
+  "version": "0.3.0",
+  "description": "tiles for the 99%",
+  "main": "linoleum-0.3.0.min.js",
+  "devDependencies": {
+    "httpd-node": "0.1.8",
+    "fs-extra": "0.9.1",
+    "grunt": "~0.4.2",
+    "grunt-contrib-jshint": "~0.6.3",
+    "grunt-contrib-concat": ">=0.4.0",
+    "grunt-contrib-uglify": ">=0.2.2",
+    "grunt-contrib-clean": ">=0.4.1",
+    "grunt-replace": ">=0.7.7",
+    "grunt-git-describe": "~2.0.2",
+    "grunt-contrib-watch": ">=0.6.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/elnarddogg/linoleum.git"
+  },
+  "keywords": [
+    "javascript",
+    "tiles",
+    "jquery.hx",
+    "animation",
+    "ui"
+  ],
+  "author": {
+    "name": "Bernard McManus",
+    "email": "bernard.mcmanus.iv@gmail.com",
+    "url": "http://github.com/elnarddogg"
+  },
+  "license": {
+    "type": "MIT",
+    "url": "https://github.com/elnarddogg/linoleum/blob/master/LICENSE.txt"
+  },
+  "bugs": {
+    "url": "https://github.com/elnarddogg/linoleum/issues"
+  },
+  "homepage": "https://github.com/elnarddogg/linoleum"
 }

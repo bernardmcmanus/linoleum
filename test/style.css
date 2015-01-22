@@ -1,0 +1,54 @@
+body {
+  font-family: Arial, sans-serif;
+}
+
+#controls {
+  color: #FFF;
+  position: relative;
+  margin: auto;
+  margin-top: 30px;
+  width: 80%;
+  border: 1px solid #FF59C7;
+  z-index: 2;
+  overflow: hidden;
+}
+
+#controls input[type=text] {
+  display: inline-block;
+  float: left;
+  padding: 3px;
+  margin: 6px;
+  width: 160px;
+}
+
+#controls button {
+  display: inline-block;
+  float: left;
+  padding: 5px;
+  margin: 6px;
+  width: 80px;
+}
+
+.templates {
+  display: none;
+}
+
+.tile.exclude {
+  visibility: hidden;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
