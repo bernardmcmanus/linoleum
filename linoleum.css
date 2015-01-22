@@ -12,7 +12,7 @@
     height: 160px;
     line-height: 160px;
     background-color: rgba(20,61,140,0.8);
-    border-radius: 50%;
+    /*border-radius: 50%;*/
   }
 
   .tile.active {

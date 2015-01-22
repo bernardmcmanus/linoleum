@@ -1,6 +1,12 @@
 window.Linoleum = (function( window , Object , Promise , $ , E$ ) {
 
 
+  var DOM_EVENTS = [ 'resize' , 'orientationchange' ];
+  var RESIZE = 'linoleum.resize';
+  var SORT = 'linoleum.sort';
+  var FILTER = 'linoleum.filter';
+
+
   function Linoleum( selector , options ) {
 
     var that = this;
@@ -17,7 +23,6 @@ window.Linoleum = (function( window , Object , Promise , $ , E$ ) {
 
     $.extend( true , that , options );
 
-    //that.cache = {};
     that.enabled = true;
     that.container = null;
 
@@ -39,15 +44,15 @@ window.Linoleum = (function( window , Object , Promise , $ , E$ ) {
       }
     });
 
-    that.handleEvent = that.handleEvent.bind( that );
-
-    $(window).on( 'resize orientationchange' , that.handleEvent );
+    DOM_EVENTS.forEach(function( evt ) {
+      window.addEventListener( evt , that );
+    });
   }
 
 
-  Linoleum.defineView = function( name , components ) {
+  /*Linoleum.defineView = function( name , components ) {
     Linoleum.Tile.defineView( name , components );
-  };
+  };*/
 
 
   Linoleum._defineAttr = function( name ) {
@@ -59,7 +64,11 @@ window.Linoleum = (function( window , Object , Promise , $ , E$ ) {
     var value = subject.getAttribute( attr );
     switch (attr) {
       case Linoleum.INDEX:
-        return parseInt( value , 10 );
+        return isNaN(parseInt( value , 10 )) ? null : parseInt( value , 10 );
+      case Linoleum.STICKY:
+      case Linoleum.INCLUDED:
+      case Linoleum.ENABLED:
+        return value == 'true' ? true : false;
       default:
         return value;
     }
@@ -70,9 +79,9 @@ window.Linoleum = (function( window , Object , Promise , $ , E$ ) {
 
   Linoleum.STICKY = Linoleum._defineAttr( 'sticky' );
 
-  Linoleum.EXCLUDED = Linoleum._defineAttr( 'excluded' );
+  Linoleum.INCLUDED = Linoleum._defineAttr( 'included' );
 
-  Linoleum.DISABLED = Linoleum._defineAttr( 'disabled' );
+  Linoleum.ENABLED = Linoleum._defineAttr( 'enabled' );
 
 
   Linoleum.prototype = E$.create({
@@ -85,7 +94,11 @@ window.Linoleum = (function( window , Object , Promise , $ , E$ ) {
 
         case 'resize':
         case 'orientationchange':
-          that.distribute();
+          that.distribute().then(function( isResize ) {
+            if (isResize) {
+              that.$emit( RESIZE , [ that.grid ]);
+            }
+          });
         break;
       }
     },
@@ -99,54 +112,103 @@ window.Linoleum = (function( window , Object , Promise , $ , E$ ) {
       options = $.extend( that.distroOpts , options );
 
       return new Promise(function( resolve ) {
+        /*that.$emit( 'linoleum.resize' , [ grid ] , function( e ) {
+          if (grid.distribute( that.container , options )) {
+            $(grid).hx( 'done' , function() {
+              resolve( true );
+            });
+          }
+          else {
+            resolve( false );
+          }
+        });*/
         if (grid.distribute( that.container , options )) {
           $(grid).hx( 'done' , function() {
-            that.$emit( 'linoleum.resize' , [ grid ]);
             resolve( true );
           });
         }
         else {
           resolve( false );
         }
+      })
+      .catch(function( err ) {
+        console.error( err.stack );
       });
     },
 
     sort: function( func ) {
 
       var that = this;
+      var grid = that.grid;
+      
+      return new Promise(function( resolve ) {
+        grid._sort( func || function() { return 0; });
+        that.$emit( SORT , [ grid ] , function( e ) {
+          that.distribute( null , {
+            delay: 0,
+            force: true
+          })
+          .then( resolve );
+        });
+      })
+      .catch(function( err ) {
+        console.error( err.stack );
+      });
+    },
+
+    /*sort: function( func ) {
+
+      var that = this;
 
       that.grid._sort( func || function() { return 0; });
 
-      console.log(that.grid);
+      //console.log(that.grid);
 
-      that.distribute( null , {
+      return that.distribute( null , {
         delay: 0,
         force: true
+      })
+      .then(function() {
+        that.$emit( 'linoleum.sort' , [ grid ]);
       });
+    },*/
 
-      //func = func || function() { return 0; };
+    filter: function( func ) {
 
-      //that.beforeSort();
-
-      //var sticky = that.getSticky();
-
-      /*var tiles = that
-        .filter(function( tile ) {
-          return !tile.sticky;
-        })
-        .sort( func || function() { return 0; });*/
-
-      /*sticky.forEach(function( tile , i ) {
-        var index = that.sticky[i];
-        tiles.splice( index , 0 , tile );
-      });*/
-
-      //$.extend( that , tiles );
-
-      //that.afterSort();
-
-      return that;
+      var that = this;
+      var grid = that.grid;
+      
+      return new Promise(function( resolve ) {
+        grid._filter( func || function() { return 0; });
+        that.$emit( FILTER , [ grid ] , function( e ) {
+          that.distribute( null , {
+            delay: 0,
+            force: true
+          })
+          .then( resolve );
+        });
+      })
+      .catch(function( err ) {
+        console.error( err.stack );
+      });
     }
+
+    /*filter: function( func ) {
+
+      var that = this;
+
+      that.grid._filter( func || function() { return 0; });
+
+      console.log(that.grid);
+
+      return that.distribute( null , {
+        delay: 0,
+        force: true
+      })
+      .then(function() {
+        that.$emit( FILTER , [ grid ]);
+      });
+    }*/
 
   });
 
@@ -155,7 +217,7 @@ window.Linoleum = (function( window , Object , Promise , $ , E$ ) {
 
     var proto = E$.create({});
 
-    proto.handleEvent = function( e , data ) {
+    /*proto.handleEvent = function( e , data ) {
 
       var that = this;
 
@@ -167,16 +229,16 @@ window.Linoleum = (function( window , Object , Promise , $ , E$ ) {
           that.distribute();
         break;
       }
-    };
+    };*/
 
-    proto.distribute = function( selector ) {
+    /*proto.distribute = function( selector ) {
       var that = this;
       var grid = that.grid;
       that.container = $(selector).get( 0 ) || that.container;
       grid.distribute( that.container ).done(function() {
         $(document).trigger( 'linoleum.resize' , [ grid ]);
       });
-    };
+    };*/
 
     /*proto._updateCache = function() {
 

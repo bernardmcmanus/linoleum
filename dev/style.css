@@ -1,7 +1,15 @@
-body {
+body,
+input,
+button
+{
   color: #ddd;
   font-family: Arial, sans-serif;
-  overflow: hidden;
+  font-size: 16px;
+}
+
+body {
+  overflow-x: hidden;
+  overflow-y: auto;
   background-color: #1D1F20;
 }
 
@@ -20,7 +28,8 @@ body {
   position: relative;
   margin: auto;
   margin-top: 30px;
-  width: 80%;
+  padding: 2%;
+  width: 76%;
   box-shadow: 0 0 0 2px #d4f852;
   z-index: 2;
   overflow: hidden;
@@ -29,22 +38,28 @@ body {
 #controls input,
 #controls button
 {
-  -webkit-filter: invert(100%);
+  display: inline-block;
+  float: left;
+  background-color: #000;
+  border: none;
+  margin: 6px;
+  padding: 5px;
+  box-shadow: 0 0 0 2px #555;
+  outline: 0;
 }
 
 #controls input[type=text] {
-  display: inline-block;
-  float: left;
-  padding: 3px;
-  margin: 6px;
+  /*display: inline-block;
+  float: left;*/
+  /*margin: 6px;*/
   width: 160px;
 }
 
 #controls button {
-  display: inline-block;
-  float: left;
-  padding: 5px;
-  margin: 6px;
+  cursor: pointer;
+  /*display: inline-block;
+  float: left;*/
+  /*margin: 6px;*/
   width: 80px;
 }
 

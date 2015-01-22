@@ -3,15 +3,15 @@
 
   var tileCount = 10;
   var sortOrder = -1;
-  var sticky = [ /*2 , 6*/ ];
-  //var disabled = [ 1 , 4 ];
+  var sticky = [ 2 , 6 ];
+  var disabled = [ 1 , 4 ];
 
 
   for (var i = 0; i < tileCount; i++) {
     (function( tile ) {
-      if (sticky.indexOf( i ) >= 0) {
+      /*if (sticky.indexOf( i ) >= 0) {
         $(tile).addClass( 'sticky' );
-      }
+      }*/
       /*if (disabled.indexOf( i ) >= 0) {
         $(tile).addClass( 'disabled' );
       }*/
@@ -21,14 +21,33 @@
 
 // ------------------------------------------------------- //
 
-  var linoleum = new Linoleum( '#container > .tile' );
+  var linoleum = new Linoleum( '#container > .tile' , {
+    /*margin: {
+      left: 0,
+      right: 0,
+      top: 0,
+      bottom: 0
+    }*/
+  });
+  
   console.log(linoleum);
-  linoleum.distribute( '#container' );
+
+  linoleum.distribute( '#container' ).then(function() {
+    console.log('done');
+  });
 
   linoleum.$when( 'linoleum.resize' , function( e , grid ) {
     console.log(e);
-    $('#container > .sizer').css( 'height' , grid.tSize.height );
+    $('#container > .sizer').css( 'height' , grid.size.height );
     //$(document).trigger( 'linoleum.resize' , [ grid ]);
+  });
+
+  linoleum.$when( 'linoleum.sort' , function( e , grid ) {
+    console.log(e);
+  });
+
+  linoleum.$when( 'linoleum.filter' , function( e , grid ) {
+    console.log(e);
   });
 
   
@@ -52,8 +71,13 @@
 
 
   $('#filter').on( 'click' , function() {
+    /*linoleum.grid.forEach(function( element ) {
+      var index = Linoleum._getAttr( element , Linoleum.INDEX );
+      console.log(index % 2);
+    });*/
     linoleum.filter(function( tile ) {
-      return ( tile.index / 2 ) === Math.round( tile.index / 2 );
+      //return ( tile.index / 2 ) === Math.round( tile.index / 2 );
+      return !!(tile.index % 2);
     });
   });
 

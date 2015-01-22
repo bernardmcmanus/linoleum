@@ -10,17 +10,10 @@ Linoleum.Grid = (function( Object , Array , Linoleum ) {
     that.rows = 0;
     that.cols = 0;
 
-    that.size = {
-      width: $(selector).outerWidth(),
-      height: $(selector).outerHeight()
-    };
-
     $(selector).toArray().map(function( element , i ) {
-      var index = element.dataset[ Linoleum.INDEX ];
-      if (index === undefined) {
-        element.setAttribute( Linoleum.INDEX , i );
-      }
-      return new Linoleum.TileData( element ).defaults();
+      var tile = new Linoleum.TileData( element ).defaults();
+      tile.index = notNull( tile.index ) ? tile.index : i;
+      return tile;
     })
     .sort(function( a , b ) {
       return a.index - b.index;
@@ -30,6 +23,14 @@ Linoleum.Grid = (function( Object , Array , Linoleum ) {
     });
 
     Object.defineProperties( that , {
+      /*_snapshot: {
+        value: that.slice( 0 )
+      },*/
+      count: {
+        get: function() {
+          return that.get().length;
+        }
+      },
       marginX: {
         get: function() {
           var margin = that.margin;
@@ -54,17 +55,17 @@ Linoleum.Grid = (function( Object , Array , Linoleum ) {
         get: function() {
           var iSize = that.iSize;
           return {
-            width: iSize.width + ( that.marginX / 2 ),
-            height: iSize.height + ( that.marginY / 2 )
+            width: iSize.width + that.marginX,
+            height: iSize.height + that.marginY
           };
         }
       },
-      tSize: {
+      size: {
         get: function() {
           var oSize = that.oSize;
           return {
-            width: oSize.width * that.cols + that.marginX,
-            height: oSize.height * that.rows + that.marginY
+            width: oSize.width * that.cols,
+            height: oSize.height * that.rows
           };
         }
       }
@@ -72,16 +73,45 @@ Linoleum.Grid = (function( Object , Array , Linoleum ) {
   }
 
 
+  function notNull( subject ) {
+    return subject !== null && typeof subject != 'undefined';
+  }
+
+
   Grid.prototype = (function() {
 
     var proto = Object.create( Array.prototype );
 
-    proto._sort = function( func ) {
+    proto.get = function( filters ) {
       var that = this;
       var tiles = that.map(function( element ) {
         return new Linoleum.TileData( element );
-      })
+      });
+      filters = $.extend( Linoleum.TileData.defaults , filters );
+      return tiles.filter(function( tile ) {
+        for (var key in filters) {
+          if (filters[key] !== tile[key]) {
+            return false;
+          }
+        }
+        return true;
+      });
+    };
+
+    proto._sort = function( func ) {
+      var that = this;
+      var tiles = that.get()
       .sort( func || function() { return 0; })
+      .map(function( td ) {
+        return td.write();
+      });
+      return that._swap( tiles );
+    };
+
+    proto._filter = function( func ) {
+      var that = this;
+      var tiles = that.get()
+      .filter( func || function() { return true; })
       .map(function( td ) {
         return td.write();
       });
@@ -90,11 +120,13 @@ Linoleum.Grid = (function( Object , Array , Linoleum ) {
 
     proto._swap = function( swap ) {
       var that = this;
+      var length = swap.length;
       var i = 0;
-      while (i < that.length) {
+      while (i < length) {
         that[i] = swap[i];
         i++;
       }
+      that.length = length;
       return that;
     };
 
@@ -135,7 +167,6 @@ Linoleum.Grid = (function( Object , Array , Linoleum ) {
     proto._buildLayout = function( container , force ) {
       
       var that = this;
-      var elements = that.slice( 0 );
       var c = that._getCols( container );
       var r = that._getRows( c );
       var layout = [];
@@ -175,16 +206,16 @@ Linoleum.Grid = (function( Object , Array , Linoleum ) {
 
     proto._getCols = function( container ) {
       var that = this;
-      var length = that.length;
+      var count = that.count;
       var oSize = that.oSize;
       var bcr = container.getBoundingClientRect();
       var cols = Math.floor( bcr.width / oSize.width );
-      return cols <= length ? cols : length;
+      return cols <= count ? cols : count;
     };
 
     proto._getRows = function( cols ) {
       var that = this;
-      return Math.ceil( that.length / cols ) || 0;
+      return Math.ceil( that.count / cols ) || 0;
     };
 
     return proto;
