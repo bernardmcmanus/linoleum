@@ -1,5 +1,18 @@
 body {
+  color: #ddd;
   font-family: Arial, sans-serif;
+  overflow: hidden;
+  background-color: #1D1F20;
+}
+
+#container {
+  text-align: center;
+  position: relative;
+  margin: auto;
+  margin-top: 30px;
+  width: 80%;
+  box-shadow: 0 0 0 2px #d4f852;
+  background-color: rgba(255,255,255,0.3);
 }
 
 #controls {
@@ -8,9 +21,15 @@ body {
   margin: auto;
   margin-top: 30px;
   width: 80%;
-  border: 1px solid #FF59C7;
+  box-shadow: 0 0 0 2px #d4f852;
   z-index: 2;
   overflow: hidden;
+}
+
+#controls input,
+#controls button
+{
+  -webkit-filter: invert(100%);
 }
 
 #controls input[type=text] {

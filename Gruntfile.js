@@ -11,7 +11,7 @@ module.exports = function( grunt ) {
   var SRC = [
     'js/linoleum.js',
     'js/grid.js',
-    'js/tile.js'
+    'js/tiledata.js'
   ];
 
 
@@ -82,7 +82,7 @@ module.exports = function( grunt ) {
     },
 
     watch: [{
-      files: [ 'Gruntfile.js' , 'package.json' , 'js/**/*' , 'test/*' ],
+      files: [ 'Gruntfile.js' , 'package.json' , 'js/**/*' , 'dev/*' ],
       tasks: [ 'dev' ]
     }],
 
@@ -129,7 +129,7 @@ module.exports = function( grunt ) {
 
 
   grunt.registerTask( 'createLive' , function() {
-    var src = __dirname + '/test';
+    var src = __dirname + '/dev';
     var dest = __dirname + '/live';
     fs.copySync( src , dest );
   });

@@ -1,4 +1,4 @@
-window.Linoleum = (function( window , document , Object , Array , Error , $ , E$ ) {
+window.Linoleum = (function( window , Object , Promise , $ , E$ ) {
 
 
   function Linoleum( selector , options ) {
@@ -28,7 +28,7 @@ window.Linoleum = (function( window , document , Object , Array , Error , $ , E$
     E$.construct( that );
 
     Object.defineProperties( that , {
-      hxOptions: {
+      distroOpts: {
         get: function() {
           return {
             duration: that.duration,
@@ -96,13 +96,56 @@ window.Linoleum = (function( window , document , Object , Array , Error , $ , E$
       var grid = that.grid;
 
       that.container = $(selector).get( 0 ) || that.container;
-      options = $.extend( that.hxOptions , options );
-      
-      if (grid.distribute( that.container , options )) {
-        $(grid).hx( 'done' , function() {
-          $(document).trigger( 'linoleum.resize' , [ grid ]);
-        });
-      }
+      options = $.extend( that.distroOpts , options );
+
+      return new Promise(function( resolve ) {
+        if (grid.distribute( that.container , options )) {
+          $(grid).hx( 'done' , function() {
+            that.$emit( 'linoleum.resize' , [ grid ]);
+            resolve( true );
+          });
+        }
+        else {
+          resolve( false );
+        }
+      });
+    },
+
+    sort: function( func ) {
+
+      var that = this;
+
+      that.grid._sort( func || function() { return 0; });
+
+      console.log(that.grid);
+
+      that.distribute( null , {
+        delay: 0,
+        force: true
+      });
+
+      //func = func || function() { return 0; };
+
+      //that.beforeSort();
+
+      //var sticky = that.getSticky();
+
+      /*var tiles = that
+        .filter(function( tile ) {
+          return !tile.sticky;
+        })
+        .sort( func || function() { return 0; });*/
+
+      /*sticky.forEach(function( tile , i ) {
+        var index = that.sticky[i];
+        tiles.splice( index , 0 , tile );
+      });*/
+
+      //$.extend( that , tiles );
+
+      //that.afterSort();
+
+      return that;
     }
 
   });
@@ -446,7 +489,7 @@ window.Linoleum = (function( window , document , Object , Array , Error , $ , E$
   return Linoleum;
 
 
-}( window , document , Object , Array , Error , jQuery , E$ ));
+}( window , Object , Promise , jQuery , E$ ));
 
 
 
