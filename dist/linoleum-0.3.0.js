@@ -1,4 +1,4 @@
-/*! linoleum - 0.3.0 - Bernard McManus - amd - gc4e8d5 - 2015-01-23 */
+/*! linoleum - 0.3.0 - Bernard McManus - nightly - g164822 - 2015-01-23 */
 
 
 (function ( root , factory ) {
