@@ -2,10 +2,15 @@
   "name": "linoleum",
   "version": "0.3.0",
   "description": "tiles for the 99%",
-  "main": "linoleum-0.3.0.min.js",
+  "main": "dist/linoleum-0.3.0.min.js",
+  "scripts": {
+    "build": "node node_modules/requirejs/bin/r.js -o build/index.js"
+  },
   "devDependencies": {
+    "colors": "~1.0.2",
     "httpd-node": "0.1.8",
     "fs-extra": "0.9.1",
+    "requirejs": ">=2.1.0",
     "grunt": "~0.4.2",
     "grunt-contrib-jshint": "~0.6.3",
     "grunt-contrib-concat": ">=0.4.0",

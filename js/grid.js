@@ -1,4 +1,4 @@
-Linoleum.Grid = (function( Object , Array , Linoleum ) {
+define([ 'util' , 'tile' ] , function( util , Tile ) {
 
 
   function Grid( selector , options ) {
@@ -11,8 +11,8 @@ Linoleum.Grid = (function( Object , Array , Linoleum ) {
     that.cols = 0;
 
     $(selector).toArray().map(function( element , i ) {
-      var tile = new Linoleum.TileData( element );
-      tile.index = notNull( tile.index ) ? tile.index : i;
+      var tile = new Tile( element );
+      tile.index = util.notNull( tile.index ) ? tile.index : i;
       return tile;
     })
     .sort(function( a , b ) {
@@ -43,15 +43,10 @@ Linoleum.Grid = (function( Object , Array , Linoleum ) {
       iSize: {
         get: function() {
           var elements = that.elements();
-          var bcr = elements[0].getBoundingClientRect();
           return {
-            width: bcr.width,
-            height: bcr.height
-          };
-          /*return {
             width: $(elements).outerWidth(),
             height: $(elements).outerHeight()
-          };*/
+          };
         }
       },
       oSize: {
@@ -76,11 +71,6 @@ Linoleum.Grid = (function( Object , Array , Linoleum ) {
   }
 
 
-  function notNull( subject ) {
-    return subject !== null && typeof subject != 'undefined';
-  }
-
-
   Grid.prototype = (function() {
 
     var proto = Object.create( Array.prototype );
@@ -89,7 +79,7 @@ Linoleum.Grid = (function( Object , Array , Linoleum ) {
       
       var that = this;
       
-      filters = $.extend( Linoleum.TileData.defaults , filters );
+      filters = $.extend( Tile.defaults , filters );
 
       return that.filter(function( tile ) {
         for (var key in filters) {
@@ -251,17 +241,7 @@ Linoleum.Grid = (function( Object , Array , Linoleum ) {
 
   return Grid;
 
-  
-}( Object , Array , Linoleum ));
-
-
-
-
-
-
-
-
-
+});
 
 
 

@@ -1,27 +1,13 @@
 module.exports = function( grunt ) {
 
 
+  var cp = require( 'child_process' );
   var httpd = require( 'httpd-node' );
   var fs = require( 'fs-extra' );
+  var colors = require( 'colors' );
 
 
   httpd.environ( 'root' , __dirname );
-
-
-  var SRC = [
-    'js/linoleum.js',
-    'js/grid.js',
-    'js/tiledata.js'
-  ];
-
-
-  var INCLUDES = [
-    'js/includes/emoney-0.2.3.min.js',
-    'js/includes/asap.js'
-  ];
-
-
-  var BUILD = INCLUDES.concat( SRC );
 
 
   grunt.initConfig({
@@ -40,7 +26,9 @@ module.exports = function( grunt ) {
     },
 
     clean: {
-      all: [ 'linoleum-*.js' , 'live' ]
+      build: [ 'dist' ],
+      dev: [ 'live' ],
+      tmp: [ 'linoleum-tmp.js' ]
     },
 
     replace: {
@@ -53,7 +41,7 @@ module.exports = function( grunt ) {
             },
             {
               match: /(\"main\")(.*?)(\")(.{1,}?)(\")/i,
-              replacement: '\"main\": \"<%= pkg.name %>-<%= pkg.version %>.min.js\"'
+              replacement: '\"main\": \"dist/<%= pkg.name %>-<%= pkg.version %>.min.js\"'
             }
           ]
         },
@@ -72,7 +60,7 @@ module.exports = function( grunt ) {
         options: {
           patterns: [{
             match: /<\!(\-){2}\s\[scripts\]\s(\-){2}>/,
-            replacement: '<script src=\"../linoleum-<%= pkg.version %>.js\"></script>'
+            replacement: '<script src=\"../dist/linoleum-<%= pkg.version %>.js\"></script>'
           }]
         },
         files: [{
@@ -83,27 +71,27 @@ module.exports = function( grunt ) {
     },
 
     watch: [{
-      files: [ 'Gruntfile.js' , 'package.json' , 'js/**/*' , 'dev/*' ],
+      files: [ 'Gruntfile.js' , 'package.json' , 'js/**/*' , 'dev/*' , 'build/*.js' ],
       tasks: [ 'dev' ]
     }],
 
     concat: {
       options: {
-        banner : '/*! <%= pkg.name %> - <%= pkg.version %> - <%= pkg.author %> - <%= grunt.config.get( \'git-hash\' ) %> - <%= grunt.template.today("yyyy-mm-dd") %> */\n\n\n'
+        banner : '/*! <%= pkg.name %> - <%= pkg.version %> - <%= pkg.author.name %> - <%= grunt.config.get( \'git-branch\' ) %> - <%= grunt.config.get( \'git-hash\' ) %> - <%= grunt.template.today("yyyy-mm-dd") %> */\n\n\n'
       },
       build: {
-        src: BUILD,
-        dest: 'linoleum-<%= pkg.version %>.js'
+        src: 'linoleum-tmp.js',
+        dest: 'dist/linoleum-<%= pkg.version %>.js'
       }
     },
 
     uglify: {
       options: {
-        banner : '/*! <%= pkg.name %> - <%= pkg.version %> - <%= pkg.author %> - <%= grunt.config.get( \'git-hash\' ) %> - <%= grunt.template.today("yyyy-mm-dd") %> */\n'
+        banner : '/*! <%= pkg.name %> - <%= pkg.version %> - <%= pkg.author.name %> - <%= grunt.config.get( \'git-branch\' ) %> - <%= grunt.config.get( \'git-hash\' ) %> - <%= grunt.template.today("yyyy-mm-dd") %> */\n'
       },
       release : {
         files : {
-          'linoleum-<%= pkg.version %>.min.js' : BUILD
+          'dist/linoleum-<%= pkg.version %>.min.js' : [ 'dist/linoleum-<%= pkg.version %>.js' ]
         }
       }
     }
@@ -136,12 +124,17 @@ module.exports = function( grunt ) {
   });
 
 
-  grunt.registerTask( 'createHash' , function() {
+  grunt.registerTask( 'ensureDist' , function() {
+    fs.ensureDirSync( './dist' );
+  });
+
+
+  grunt.registerTask( 'git-hash' , function() {
 
     grunt.task.requires( 'git-describe' );
 
     var rev = grunt.config.get( 'git-version' );
-    var matches = rev.match( /(\-{0,1})+([A-Za-z0-9]{7})+(\-{0,1})/ );
+    var matches = rev.match( /\-?([A-Za-z0-9]{7})\-?/ );
 
     var hash = matches
       .filter(function( match ) {
@@ -158,24 +151,63 @@ module.exports = function( grunt ) {
   });
 
 
+  grunt.registerTask( 'git-branch' , function() {
+    var done = this.async();
+    cp.exec( 'git status' , function( err , stdout , stderr ) {
+      if (!err) {
+        var branch = stdout
+          .split( '\n' )
+          .shift()
+          .replace( /on\sbranch\s/i , '' );
+        grunt.config.set( 'git-branch' , branch );
+      }
+      done();
+    });
+  });
+
+
+  grunt.registerTask( 'build:amd' , function() {
+    var done = this.async();
+    cp.exec( 'npm run build' , done );
+  });
+
+
+  grunt.registerTask( 'build:describe' , function() {
+    var pkg = grunt.config.get( 'pkg' );
+    var dist = pkg.name + '-' + pkg.version;
+    var dev = dist + '.js';
+    var prod = dist + '.min.js';
+    var bytesInit = fs.statSync( 'dist/' + dev ).size;
+    var bytesFinal = fs.statSync( 'dist/' + prod ).size;
+    var kbInit = (Math.round( bytesInit / 10 ) / 100);
+    var kbFinal = (Math.round( bytesFinal / 10 ) / 100);
+    console.log('File ' + prod.cyan + ' created: ' + (kbInit + ' kB').green + ' \u2192 ' + (kbFinal + ' kB').green);
+  });
+
+
   grunt.registerTask( 'always' , [
     'jshint',
     'clean',
+    'ensureDist',
     'git-describe',
-    'createHash'
+    'git-hash',
+    'git-branch',
+    'build:amd',
+    'concat',
+    'clean:tmp'
   ]);
 
 
   grunt.registerTask( 'default' , [
     'always',
     'uglify',
-    'replace:packages'
+    'replace:packages',
+    'build:describe'
   ]);
 
 
   grunt.registerTask( 'dev' , [
     'always',
-    'concat',
     'createLive',
     'replace:debug'
   ]);

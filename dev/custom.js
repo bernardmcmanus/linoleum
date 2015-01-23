@@ -1,6 +1,5 @@
 (function() {
 
-
   var tileCount = 12;
   var sortOrder = -1;
   var sticky = [ 2 , 6 ];

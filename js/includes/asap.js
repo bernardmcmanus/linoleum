@@ -1,4 +1,4 @@
-window.asap = (function( window , document , setTimeout ) {
+define([], function() {
 
   var UNDEFINED;
   var UNDEFINED_STR = '' + UNDEFINED;
@@ -79,7 +79,7 @@ window.asap = (function( window , document , setTimeout ) {
 
   return asap;
 
-}( window , document , setTimeout ));
+});
 
 
 

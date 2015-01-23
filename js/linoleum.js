@@ -1,4 +1,4 @@
-window.Linoleum = (function( window , document , Object , Promise , asap , $ , E$ ) {
+define([ 'util' , 'asap' , 'grid' ] , function( util , asap , Grid ) {
 
 
   var DOM_EVENTS = [ 'resize' , 'orientationchange' ];
@@ -27,7 +27,7 @@ window.Linoleum = (function( window , document , Object , Promise , asap , $ , E
     that.enabled = true;
     that.container = null;
 
-    that.grid = new Linoleum.Grid( selector , {
+    that.grid = new Grid( selector , {
       margin: that.margin
     });
 
@@ -75,7 +75,7 @@ window.Linoleum = (function( window , document , Object , Promise , asap , $ , E
       case Linoleum.STICKY:
       case Linoleum.INCLUDED:
       case Linoleum.ENABLED:
-        return notNull( val ) ? ( 'true' ? true : false ) : null;
+        return util.notNull( val ) ? ( 'true' ? true : false ) : null;
       default:
         return val;
     }
@@ -191,11 +191,6 @@ window.Linoleum = (function( window , document , Object , Promise , asap , $ , E
   });
 
 
-  function notNull( subject ) {
-    return subject !== null && typeof subject != 'undefined';
-  }
-
-
   function buildMarginObject( val ) {
     var margin = {};
     [
@@ -213,8 +208,12 @@ window.Linoleum = (function( window , document , Object , Promise , asap , $ , E
 
   return Linoleum;
 
+});
 
-}( window , document , Object , Promise , asap , jQuery , E$ ));
+
+
+
+
 
 
 

@@ -6,7 +6,7 @@
     "Bernard McManus"
   ],
   "description": "tiles for the 99%",
-  "main": "linoleum-0.3.0.min.js",
+  "main": "dist/linoleum-0.3.0.min.js",
   "keywords": [
     "javascript",
     "tiles",
