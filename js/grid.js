@@ -11,7 +11,7 @@ Linoleum.Grid = (function( Object , Array , Linoleum ) {
     that.cols = 0;
 
     $(selector).toArray().map(function( element , i ) {
-      var tile = new Linoleum.TileData( element ).defaults();
+      var tile = new Linoleum.TileData( element );
       tile.index = notNull( tile.index ) ? tile.index : i;
       return tile;
     })
@@ -19,13 +19,10 @@ Linoleum.Grid = (function( Object , Array , Linoleum ) {
       return a.index - b.index;
     })
     .forEach(function( td ) {
-      that.push( td.write() );
+      that.push( td );
     });
 
     Object.defineProperties( that , {
-      /*_snapshot: {
-        value: that.slice( 0 )
-      },*/
       count: {
         get: function() {
           return that.get().length;
@@ -45,10 +42,16 @@ Linoleum.Grid = (function( Object , Array , Linoleum ) {
       },
       iSize: {
         get: function() {
+          var elements = that.elements();
+          var bcr = elements[0].getBoundingClientRect();
           return {
-            width: $(selector).outerWidth(),
-            height: $(selector).outerWidth()
+            width: bcr.width,
+            height: bcr.height
           };
+          /*return {
+            width: $(elements).outerWidth(),
+            height: $(elements).outerHeight()
+          };*/
         }
       },
       oSize: {
@@ -83,12 +86,12 @@ Linoleum.Grid = (function( Object , Array , Linoleum ) {
     var proto = Object.create( Array.prototype );
 
     proto.get = function( filters ) {
+      
       var that = this;
-      var tiles = that.map(function( element ) {
-        return new Linoleum.TileData( element );
-      });
+      
       filters = $.extend( Linoleum.TileData.defaults , filters );
-      return tiles.filter(function( tile ) {
+
+      return that.filter(function( tile ) {
         for (var key in filters) {
           if (filters[key] !== tile[key]) {
             return false;
@@ -98,23 +101,44 @@ Linoleum.Grid = (function( Object , Array , Linoleum ) {
       });
     };
 
-    proto._sort = function( func ) {
+    proto.elements = function( filters ) {
       var that = this;
-      var tiles = that.get()
-      .sort( func || function() { return 0; })
-      .map(function( td ) {
-        return td.write();
+      return that.get( filters ).map(function( tile ) {
+        return tile.element;
       });
-      return that._swap( tiles );
+    };
+
+    proto.inverse = function( subset ) {
+      var that = this;
+      return that.filter(function( tile ) {
+        return subset.indexOf( tile ) < 0;
+      });
     };
 
     proto._filter = function( func ) {
+
       var that = this;
-      var tiles = that.get()
-      .filter( func || function() { return true; })
-      .map(function( td ) {
-        return td.write();
+      var sticky = that.get({ sticky: true });
+      var include = that.filter( func );
+      var exclude = that.inverse( include );
+
+      include.forEach(function( tile ) {
+        tile.write({ included: true });
       });
+
+      exclude.forEach(function( tile ) {
+        tile.write({ included: false });
+      });
+      
+      console.log('include',include);
+      console.log('exclude',exclude);
+
+      return that;
+    };
+
+    proto._sort = function( func ) {
+      var that = this;
+      var tiles = that.get().sort( func );
       return that._swap( tiles );
     };
 
@@ -126,42 +150,44 @@ Linoleum.Grid = (function( Object , Array , Linoleum ) {
         that[i] = swap[i];
         i++;
       }
-      that.length = length;
       return that;
     };
 
-    proto.distribute = function( container , options ) {
-      
+    proto.resize = function( container , force ) {
       var that = this;
-      var layout = that._buildLayout( container , options.force );
-
+      var layout = that._buildLayout( container , force );
       if (layout) {
-        
-        $(that)
-        .hx()
-        .detach()
-        .clear();
-
-        if (options.delay) {
-          $(that).hx( 'defer' , options.delay );
-        }
-
-        $(that)
-        .hx()
-        .animate({
-          type: 'transform',
-          translate: function( element , i ) {
-            return layout[i];
-          },
-          duration: options.duration,
-          easing: options.easing
-        });
-
+        that.layout = layout;
         return true;
       }
-      else {
-        return false;
+      return false;
+    };
+
+    proto.distribute = function( options ) {
+      
+      var that = this;
+      var elements = that.elements();
+      var layout = that.layout;
+
+      $(elements)
+      .hx()
+      .detach()
+      .clear();
+
+      if (options.delay) {
+        $(elements).hx( 'defer' , options.delay );
       }
+
+      return $(elements)
+      .hx()
+      .animate({
+        type: 'transform',
+        translate: function( element , i ) {
+          return layout[i];
+        },
+        duration: options.duration,
+        easing: options.easing
+      });
     };
 
     proto._buildLayout = function( container , force ) {
@@ -171,7 +197,7 @@ Linoleum.Grid = (function( Object , Array , Linoleum ) {
       var r = that._getRows( c );
       var layout = [];
 
-      if (force || (c != that.cols && r != that.rows)) {
+      if (force || (c != that.cols || r != that.rows)) {
         for (var i = 0; i < r; i++) {
           for (var j = 0; j < c; j++) {
             layout.push({

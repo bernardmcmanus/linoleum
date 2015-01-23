@@ -1,7 +1,9 @@
-window.Linoleum = (function( window , Object , Promise , $ , E$ ) {
+window.Linoleum = (function( window , document , Object , Promise , asap , $ , E$ ) {
 
 
   var DOM_EVENTS = [ 'resize' , 'orientationchange' ];
+  var SIZER_CLASS = 'linoleum-sizer';
+  var DISTRIBUTE = 'linoleum.distribute';
   var RESIZE = 'linoleum.resize';
   var SORT = 'linoleum.sort';
   var FILTER = 'linoleum.filter';
@@ -14,14 +16,13 @@ window.Linoleum = (function( window , Object , Promise , $ , E$ ) {
     that.duration = 400;
     that.delay = 200;
     that.easing = 'ease';
-    that.margin = {
-      left: 5,
-      right: 5,
-      top: 5,
-      bottom: 5
-    };
+    that.margin = buildMarginObject( 5 );
 
     $.extend( true , that , options );
+
+    if (typeof that.margin != 'object') {
+      that.margin = buildMarginObject( that.margin );
+    }
 
     that.enabled = true;
     that.container = null;
@@ -38,8 +39,19 @@ window.Linoleum = (function( window , Object , Promise , $ , E$ ) {
           return {
             duration: that.duration,
             easing: that.easing,
-            delay: that.delay
+            delay: that.delay,
+            force: false
           };
+        }
+      },
+      included: {
+        get: function() {
+          return that.grid.elements({ included: true });
+        }
+      },
+      excluded: {
+        get: function() {
+          return that.grid.elements({ included: false });
         }
       }
     });
@@ -50,27 +62,22 @@ window.Linoleum = (function( window , Object , Promise , $ , E$ ) {
   }
 
 
-  /*Linoleum.defineView = function( name , components ) {
-    Linoleum.Tile.defineView( name , components );
-  };*/
-
-
   Linoleum._defineAttr = function( name ) {
     return 'data-linoleum-' + name;
   };
 
 
   Linoleum._getAttr = function( subject , attr ) {
-    var value = subject.getAttribute( attr );
+    var val = subject.getAttribute( attr );
     switch (attr) {
       case Linoleum.INDEX:
-        return isNaN(parseInt( value , 10 )) ? null : parseInt( value , 10 );
+        return isNaN(parseInt( val , 10 )) ? null : parseInt( val , 10 );
       case Linoleum.STICKY:
       case Linoleum.INCLUDED:
       case Linoleum.ENABLED:
-        return value == 'true' ? true : false;
+        return notNull( val ) ? ( 'true' ? true : false ) : null;
       default:
-        return value;
+        return val;
     }
   };
 
@@ -94,13 +101,32 @@ window.Linoleum = (function( window , Object , Promise , $ , E$ ) {
 
         case 'resize':
         case 'orientationchange':
-          that.distribute().then(function( isResize ) {
+          that.distribute( null ).then(function( isResize ) {
             if (isResize) {
               that.$emit( RESIZE , [ that.grid ]);
             }
           });
         break;
       }
+    },
+
+    sizer: function() {
+      var that = this;
+      var grid = that.grid;
+      asap(function() {
+        var sizer = document.createElement( 'div' );
+        var container = that.container;
+        if (!$(container).find( '.' + SIZER_CLASS ).length) {
+          $(sizer).addClass( SIZER_CLASS ).appendTo( container );
+          that.$when( DISTRIBUTE , function( e ) {
+            $(sizer).css({
+              width: grid.size.width,
+              height: grid.size.height
+            });
+          });
+        }
+      });
+      return that;
     },
 
     distribute: function( selector , options ) {
@@ -112,24 +138,18 @@ window.Linoleum = (function( window , Object , Promise , $ , E$ ) {
       options = $.extend( that.distroOpts , options );
 
       return new Promise(function( resolve ) {
-        /*that.$emit( 'linoleum.resize' , [ grid ] , function( e ) {
-          if (grid.distribute( that.container , options )) {
-            $(grid).hx( 'done' , function() {
-              resolve( true );
+        asap(function() {
+          if (grid.resize( that.container , options.force )) {
+            that.$emit( DISTRIBUTE , [ grid ] , function( e ) {
+              grid.distribute( options ).hx( 'done' , function() {
+                resolve( true );
+              });
             });
           }
           else {
             resolve( false );
           }
-        });*/
-        if (grid.distribute( that.container , options )) {
-          $(grid).hx( 'done' , function() {
-            resolve( true );
-          });
-        }
-        else {
-          resolve( false );
-        }
+        });
       })
       .catch(function( err ) {
         console.error( err.stack );
@@ -144,11 +164,7 @@ window.Linoleum = (function( window , Object , Promise , $ , E$ ) {
       return new Promise(function( resolve ) {
         grid._sort( func || function() { return 0; });
         that.$emit( SORT , [ grid ] , function( e ) {
-          that.distribute( null , {
-            delay: 0,
-            force: true
-          })
-          .then( resolve );
+          that.distribute( null , { delay: 0, force: true }).then( resolve );
         });
       })
       .catch(function( err ) {
@@ -156,36 +172,15 @@ window.Linoleum = (function( window , Object , Promise , $ , E$ ) {
       });
     },
 
-    /*sort: function( func ) {
-
-      var that = this;
-
-      that.grid._sort( func || function() { return 0; });
-
-      //console.log(that.grid);
-
-      return that.distribute( null , {
-        delay: 0,
-        force: true
-      })
-      .then(function() {
-        that.$emit( 'linoleum.sort' , [ grid ]);
-      });
-    },*/
-
     filter: function( func ) {
 
       var that = this;
       var grid = that.grid;
       
       return new Promise(function( resolve ) {
-        grid._filter( func || function() { return 0; });
+        grid._filter( func || function() { return true; });
         that.$emit( FILTER , [ grid ] , function( e ) {
-          that.distribute( null , {
-            delay: 0,
-            force: true
-          })
-          .then( resolve );
+          that.distribute( null , { delay: 0, force: true }).then( resolve );
         });
       })
       .catch(function( err ) {
@@ -193,365 +188,33 @@ window.Linoleum = (function( window , Object , Promise , $ , E$ ) {
       });
     }
 
-    /*filter: function( func ) {
-
-      var that = this;
-
-      that.grid._filter( func || function() { return 0; });
-
-      console.log(that.grid);
-
-      return that.distribute( null , {
-        delay: 0,
-        force: true
-      })
-      .then(function() {
-        that.$emit( FILTER , [ grid ]);
-      });
-    }*/
-
   });
 
 
-  /*Linoleum.prototype = */(function() {
-
-    var proto = E$.create({});
-
-    /*proto.handleEvent = function( e , data ) {
-
-      var that = this;
-
-      switch (e.type) {
-
-        case 'resize':
-        case 'orientationchange':
-          $(that.grid).hx().detach().clear().defer( that.delay );
-          that.distribute();
-        break;
-      }
-    };*/
-
-    /*proto.distribute = function( selector ) {
-      var that = this;
-      var grid = that.grid;
-      that.container = $(selector).get( 0 ) || that.container;
-      grid.distribute( that.container ).done(function() {
-        $(document).trigger( 'linoleum.resize' , [ grid ]);
-      });
-    };*/
-
-    /*proto._updateCache = function() {
-
-      var cache = this.cache;
-
-      cache.columns = this.columns;
-      cache.rows = this.rows;
-    };*/
-
-    /*proto._onViewportChangeEvent = function( e , data ) {
-
-      var that = this;
-
-      if (that.view !== 'distribute') {
-        return;
-      }
-
-      if ((that.columns === that.cache.columns) || !that.options.distroDelay) {
-        that.distribute( null , {} , null , 'zero' );
-        return;
-      }
-
-      that.rejectViewPromise = that.rejectViewPromise || function() {};
-      that.rejectViewPromise();
-
-      var viewPromise, viewPromiseTO;
-
-      viewPromise = new Promise(function( resolve , reject ) {
-        that.rejectViewPromise = reject;
-        viewPromiseTO = setTimeout( resolve , that.options.distroDelay );
-      });
-
-      viewPromise.then(function() {
-        that.distribute();
-      });
-
-      viewPromise.catch(function() {
-        clearTimeout( viewPromiseTO );
-      });
-    };*/
-
-    /*proto.distribute = function( selector , options , callback , _method ) {
-
-      var that = this;
-      options = options || {};
-      callback = callback || function() {};
-
-      that.container = (selector ? document.querySelector( selector ) : that.container);
-      that.view = 'distribute';
-
-      if (!that.container) {
-        throw new Error( 'linoleum.distribute requires a container.' );
-      }
-
-      options = $.extend({
-        duration: that.options.duration,
-        easing: that.options.easing
-      } , options );
-
-      that.grid = defineGrid( that );
-
-      _distribute( that , options , _method , function() {
-
-        if (_method !== 'zero') {
-          $(document).trigger( 'linoleum.distribute' , {
-            rows: that.rows,
-            columns: that.columns
-          });
-          that._updateCache();
-        }
-        
-        callback();
-      });
-
-      that.resize();
-
-      return that;
-    };*/
-
-    proto.lSort = function( func ) {
-
-      func = func || function() { return 0; };
-
-      var that = this;
-
-      that.beforeSort();
-
-      var sticky = that.getSticky();
-
-      var tiles = that
-        .filter(function( tile ) {
-          return !tile.sticky;
-        })
-        .sort( func );
-
-      sticky.forEach(function( tile , i ) {
-        var index = that.sticky[i];
-        tiles.splice( index , 0 , tile );
-      });
-
-      $.extend( that , tiles );
-
-      that.afterSort();
-
-      return that;
-    };
-
-    proto.lFilter = function( func ) {
-
-      func = func || function() { return true; };
-
-      var that = this;
-
-      that.beforeFilter();
-
-      var sticky = that.getSticky();
-
-      var tiles = that
-        .filter(function( tile ) {
-
-          if (tile.sticky) {
-            return false;
-          }
-
-          var result = func( tile );
-
-          if (!result) {
-            tile.exclude();
-          }
-          else {
-            tile.include();
-          }
-
-          return true;
-        });
-
-      sticky.forEach(function( tile , i ) {
-        var index = that.sticky[i];
-        tiles.splice( index , 0 , tile );
-      });
-
-      $.extend( that , tiles );
-      that.afterFilter();
-      return that;
-    };
-
-    proto.getSticky = function() {
-      return this.filter(function( tile ) {
-        return tile.sticky;
-      });
-    };
-
-    proto.getIncluded = function() {
-      return this.filter(function( tile ) {
-        return tile.included;
-      });
-    };
-
-    proto.enable = function() {
-      this.forEach(function( tile ) {
-        tile.enable();
-      });
-      this.enabled = true;
-    };
-
-    proto.disable = function( evenActive ) {
-      this.forEach(function( tile ) {
-        if (!evenActive && tile.active) {
-          return;
-        }
-        tile.disable();
-      });
-      this.enabled = false;
-    };
-
-    proto.resize = function( options ) {
-
-      if ($(this.container).children( '.sizer' ).height() === this.totalY) {
-        return;
-      }
-
-      $(this.container).children( '.sizer' ).css( 'height' , this.totalY + 'px' );
-
-      $(document).trigger( 'linoleum.resize' , {
-        rows: this.rows,
-        columns: this.columns
-      });
-    };
-
-    proto.destroy = function() {
-      $(window).off( 'resize orientationchange' , this.handleEvent );
-    };
-
-    return proto;
-
-  }());
-
-
-  /*function defineGrid( instance ) {
-
-    var grid = [];
-    var i = 0;
-
-    for (var row = 0; row < instance.rows; row++) {
-
-      for (var col = 0; col < instance.columns; col++) {
-
-        if (i >= instance.included) {
-          break;
-        }
-
-        grid.push(
-          getGridPosition( instance , instance[i] , row , col )
-        );
-
-        i++;
-      }
-    }
-
-    return grid;
-  }
-
-  function getGridPosition( instance , tile , row , col ) {
-    return {
-      x: (col * tile.bcr.width) + (instance.marginX * (col + 1)) + getCenterOffsetX( instance , tile ),
-      y: (row * tile.bcr.height) + (instance.options.margin.top * (row + 1)) + (instance.options.margin.bottom * row)
-    };
+  function notNull( subject ) {
+    return subject !== null && typeof subject != 'undefined';
   }
 
 
-  function _distribute( instance , options , method , callback ) {
-
-    instance.getIncluded().forEach(function( tile , i ) {
-
-      var translate = instance.grid[i];
-
-      tile.defineView( 'home' , createTileHomeView( translate ));
-
-      if (tile.active) {
-        return;
-      }
-
-      var hxTile = {
-        type: 'transform',
-        translate: translate,
-        easing: options.easing,
-        duration: options.duration
-      };
-
-      var hxInner = {
-        type: 'transform',
-        rotate: null,
-        duration: options.duration,
-        easing: options.easing
-      };
-
-      if (method === 'zero') {
-        $(tile).hx( 'zero' , hxTile );
-        $(tile).find( '.inner' ).hx( 'zero' , hxInner );
-      }
-      else {
-        $(tile).hx().animate( hxTile );
-        $(tile).find( '.inner' ).hx().animate( hxInner );
-      }
+  function buildMarginObject( val ) {
+    var margin = {};
+    [
+      'left',
+      'right',
+      'top',
+      'bottom'
+    ]
+    .forEach(function( key ) {
+      margin[key] = val;
     });
-
-    if (method !== 'zero') {
-      $(instance).hx( 'done' , callback );
-    }
+    return margin;
   }
-
-
-  function createTileHomeView( translate ) {
-    return {
-      method: 'animate',
-      tile: function( tile ) {
-        $(tile).hx().reset( 'transform' );
-        return {
-          type: 'transform',
-          translate: translate
-        };
-      },
-      inner: function( tile ) {
-        var inner = tile.querySelector( '.inner' );
-        $(inner).hx().reset( 'transform' );
-        return {
-          type: 'transform'
-        };
-      },
-      after: function( tile ) {
-        tile.deactivate();
-      }
-    };
-  }
-
-
-  function getCenterOffsetX( instance , tile ) {
-    return (instance.containerBCR.width - (tile.bcr.width * instance.columns) - (instance.marginX * (instance.columns + 1))) / 2;
-  }
-
-
-  function descriptor( get , set ) {
-    return {
-      get: get,
-      set: set
-    };
-  }*/
 
 
   return Linoleum;
 
 
-}( window , Object , Promise , jQuery , E$ ));
+}( window , document , Object , Promise , asap , jQuery , E$ ));
 
 
 

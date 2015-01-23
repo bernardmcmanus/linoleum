@@ -16,7 +16,8 @@ module.exports = function( grunt ) {
 
 
   var INCLUDES = [
-    'js/includes/emoney-0.2.3.min.js'
+    'js/includes/emoney-0.2.3.min.js',
+    'js/includes/asap.js'
   ];
 
 
