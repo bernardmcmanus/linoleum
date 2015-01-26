@@ -8,14 +8,14 @@
 
   function createTile( append ) {
     var tile = document.querySelector( '.templates .tile' ).cloneNode( true );
-    observe( tile );
+    observeTile( tile );
     if (append) {
       $('#container').append( tile );
     }
     return tile;
   }
 
-  function observe( element ) {
+  function observeTile( element ) {
     var observer = new MutationObserver(function( mutations ) {
       mutations.filter(function( m ) {
         return m.attributeName == Linoleum.INDEX;
@@ -52,19 +52,21 @@
   })
   .$when( 'linoleum.sort' , function( e , grid ) {
     console.log(e.type/*,grid*/);
+    linoleum.distribute({ delay: 0 });
   })
   .$when( 'linoleum.filter' , function( e , grid ) {
     console.log(e.type/*,grid*/);
     $(linoleum.included).css( 'display' , '' );
     $(linoleum.excluded).css( 'display' , 'none' );
+    linoleum.distribute({ delay: 0 });
   })
   .$when( 'linoleum.add' , function( e , elements ) {
     console.log( e.type );
-    linoleum.distribute( null , { force: true, delay: 0 });
+    linoleum.distribute({ delay: 0 });
   })
   .$when( 'linoleum.remove' , function( e , elements ) {
     console.log( e.type );
-    linoleum.distribute( null , { force: true, delay: 0 });
+    linoleum.distribute({ delay: 0 });
   })
   .sizer();
 
@@ -86,7 +88,7 @@
       height: $('#size-height').val() + 'px',
       'line-height': $('#size-height').val() + 'px'
     });
-    linoleum.distribute( null , { force: true, delay: 0 });
+    linoleum.distribute({ delay: 0 });
   });
 
 
@@ -104,7 +106,7 @@
   });
 
   $('#distribute').on( 'click' , function() {
-    linoleum.distribute( null , { force: true, delay: 0 });
+    linoleum.distribute({ delay: 0 });
   });
 
 

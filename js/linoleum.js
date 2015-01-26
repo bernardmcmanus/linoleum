@@ -23,7 +23,7 @@ define([ 'util' , 'asap' , 'grid' ] , function( util , asap , Grid ) {
 
     $.extend( true , that , options );
 
-    if (typeof that.margin != 'object') {
+    if (!util.is( that.margin , 'object' )) {
       that.margin = buildMarginObject( that.margin );
     }
 
@@ -43,7 +43,7 @@ define([ 'util' , 'asap' , 'grid' ] , function( util , asap , Grid ) {
             duration: that.duration,
             easing: that.easing,
             delay: that.delay,
-            force: false
+            force: true
           };
         }
       },
@@ -104,7 +104,7 @@ define([ 'util' , 'asap' , 'grid' ] , function( util , asap , Grid ) {
 
         case 'resize':
         case 'orientationchange':
-          that.distribute( null ).then(function( isResize ) {
+          that.distribute({ force: false }).then(function( isResize ) {
             if (isResize) {
               that.$emit( RESIZE , [ that.grid ]);
             }
@@ -132,10 +132,13 @@ define([ 'util' , 'asap' , 'grid' ] , function( util , asap , Grid ) {
       return that;
     },
 
-    distribute: function( selector , options ) {
+    distribute: function( /*selector , options*/ ) {
 
       var that = this;
       var grid = that.grid;
+      var args = util.arrayCast( arguments );
+      var selector = util.is( args[0] , 'string' ) ? args.shift() : null;
+      var options = args.pop();
 
       that.container = $(selector).get( 0 ) || that.container;
       options = $.extend( that.distroOpts , options );
@@ -166,14 +169,36 @@ define([ 'util' , 'asap' , 'grid' ] , function( util , asap , Grid ) {
       
       return new Promise(function( resolve ) {
         grid._sort( func || function() { return 0; });
+        that.$emit( SORT , [ grid ] , resolve );
+        reject();
+        /*that.$emit( SORT , [ grid ] , function( e ) {
+          //that.distribute({ delay: 0 }).then( resolve );
+          grid._sort( func || function() { return 0; });
+          resolve();
+        });*/
+      })
+      .catch(function( err ) {
+        if (err) {
+          that.$emit( ERROR , err );
+        }
+      });
+    },
+
+    /*sort: function( func ) {
+
+      var that = this;
+      var grid = that.grid;
+      
+      return new Promise(function( resolve ) {
+        grid._sort( func || function() { return 0; });
         that.$emit( SORT , [ grid ] , function( e ) {
-          that.distribute( null , { delay: 0, force: true }).then( resolve );
+          that.distribute({ delay: 0 }).then( resolve );
         });
       })
       .catch(function( err ) {
         that.$emit( ERROR , err );
       });
-    },
+    },*/
 
     filter: function( func ) {
 
@@ -182,14 +207,36 @@ define([ 'util' , 'asap' , 'grid' ] , function( util , asap , Grid ) {
       
       return new Promise(function( resolve ) {
         grid._filter( func || function() { return true; });
+        that.$emit( FILTER , [ grid ] , resolve );
+        reject();
+        /*that.$emit( FILTER , [ grid ] , function( e ) {
+          //that.distribute({ delay: 0 }).then( resolve );
+          grid._filter( func || function() { return true; });
+          resolve();
+        });*/
+      })
+      .catch(function( err ) {
+        if (err) {
+          that.$emit( ERROR , err );
+        }
+      });
+    },
+
+    /*filter: function( func ) {
+
+      var that = this;
+      var grid = that.grid;
+      
+      return new Promise(function( resolve ) {
+        grid._filter( func || function() { return true; });
         that.$emit( FILTER , [ grid ] , function( e ) {
-          that.distribute( null , { delay: 0, force: true }).then( resolve );
+          that.distribute({ delay: 0 }).then( resolve );
         });
       })
       .catch(function( err ) {
         that.$emit( ERROR , err );
       });
-    },
+    },*/
 
     add: function( elements ) {
       var that = this;
