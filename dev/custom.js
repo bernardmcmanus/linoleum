@@ -6,19 +6,30 @@
   var disabled = [ 1 , 4 ];
 
 
-  function createTile( number ) {
+  function createTile( append ) {
     var tile = document.querySelector( '.templates .tile' ).cloneNode( true );
-    $(tile).find( '.inner' ).html(
-      $('#container > .tile').length
-    );
+    observe( tile );
+    if (append) {
+      $('#container').append( tile );
+    }
     return tile;
   }
 
+  function observe( element ) {
+    var observer = new MutationObserver(function( mutations ) {
+      mutations.filter(function( m ) {
+        return m.attributeName == Linoleum.INDEX;
+      })
+      .forEach(function( m ) {
+        $(element).find( '.inner' ).html( element.dataset.linoleumIndex );
+      });
+    });
+    observer.observe( element , { attributes: true });
+    return observer;
+  }
 
   for (var i = 0; i < tileCount; i++) {
-    (function( tile ) {
-      $('#container').append( tile );
-    }( createTile( tileCount )));
+    createTile( true );
   }
 
 // ------------------------------------------------------- //
@@ -26,6 +37,12 @@
   var linoleum = new Linoleum( '#container > .tile' , {
     margin: 0
   })
+  .$when( 'linoleum.error' , function( e , err ) {
+    console.error( err.stack );
+  })
+  /*.$when([ 'linoleum.sort' , 'linoleum.filter' ] , function( e , grid ) {
+    e.preventDefault();
+  })*/
   .$when( 'linoleum.distribute' , function( e , grid ) {
     console.log(e.type/*,grid*/);
   })
@@ -37,9 +54,17 @@
     console.log(e.type/*,grid*/);
   })
   .$when( 'linoleum.filter' , function( e , grid ) {
-    //console.log(e.type,grid);
+    console.log(e.type/*,grid*/);
     $(linoleum.included).css( 'display' , '' );
     $(linoleum.excluded).css( 'display' , 'none' );
+  })
+  .$when( 'linoleum.add' , function( e , elements ) {
+    console.log( e.type );
+    linoleum.distribute( null , { force: true, delay: 0 });
+  })
+  .$when( 'linoleum.remove' , function( e , elements ) {
+    console.log( e.type );
+    linoleum.distribute( null , { force: true, delay: 0 });
   })
   .sizer();
 
@@ -61,24 +86,25 @@
       height: $('#size-height').val() + 'px',
       'line-height': $('#size-height').val() + 'px'
     });
-    linoleum.distribute( null , { delay: 0 });
+    linoleum.distribute( null , { force: true, delay: 0 });
   });
 
 
   $('#add').on( 'click' , function() {
-    var tile = createTile( tileCount );
-    linoleum.add( tile );
-    /*linoleum.destroy();
-    tileCount++;
-    var tile = createTile( tileCount );
-    $('#container').append( tile );
-    linoleum = createLinoleum();
-    initLinoleum();*/
+    linoleum.add(createTile( true ));
   });
 
+  $('#remove').on( 'click' , function() {
+    var elements = $('#remove-input').val().split( ',' ).map(function( i ) {
+      var index = parseInt( i , 10 );
+      return $('#container > .tile').eq( index ).remove().get( 0 );
+    });
+    console.log(elements);
+    linoleum.remove( elements );
+  });
 
   $('#distribute').on( 'click' , function() {
-    linoleum.distribute( '#container' );
+    linoleum.distribute( null , { force: true, delay: 0 });
   });
 
 

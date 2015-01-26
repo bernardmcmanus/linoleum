@@ -7,6 +7,9 @@ define([ 'util' , 'asap' , 'grid' ] , function( util , asap , Grid ) {
   var RESIZE = 'linoleum.resize';
   var SORT = 'linoleum.sort';
   var FILTER = 'linoleum.filter';
+  var ERROR = 'linoleum.error';
+  var ADD = 'linoleum.add';
+  var REMOVE = 'linoleum.remove';
 
 
   function Linoleum( selector , options ) {
@@ -152,7 +155,7 @@ define([ 'util' , 'asap' , 'grid' ] , function( util , asap , Grid ) {
         });
       })
       .catch(function( err ) {
-        console.error( err.stack );
+        that.$emit( ERROR , err );
       });
     },
 
@@ -168,7 +171,7 @@ define([ 'util' , 'asap' , 'grid' ] , function( util , asap , Grid ) {
         });
       })
       .catch(function( err ) {
-        console.error( err.stack );
+        that.$emit( ERROR , err );
       });
     },
 
@@ -184,7 +187,21 @@ define([ 'util' , 'asap' , 'grid' ] , function( util , asap , Grid ) {
         });
       })
       .catch(function( err ) {
-        console.error( err.stack );
+        that.$emit( ERROR , err );
+      });
+    },
+
+    add: function( elements ) {
+      var that = this;
+      that.$emit( ADD , [ elements ] , function( e ) {
+        that.grid.add( elements );
+      });
+    },
+
+    remove: function( elements ) {
+      var that = this;
+      that.$emit( REMOVE , [ elements ] , function( e ) {
+        that.grid.remove( elements );
       });
     }
 

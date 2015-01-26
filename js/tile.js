@@ -41,7 +41,7 @@ define([ 'util' ], function( util ) {
       element.setAttribute( Linoleum.STICKY , that.sticky );
       element.setAttribute( Linoleum.INCLUDED , that.included );
       element.setAttribute( Linoleum.ENABLED , that.enabled );
-      return element;
+      return that;
     }
   };
 

@@ -49,26 +49,25 @@ body {
 }
 
 #controls input[type=text] {
-  /*display: inline-block;
-  float: left;*/
-  /*margin: 6px;*/
-  width: 160px;
+  width: 162px;
+}
+
+#controls input[type=text].small {
+  width: 70px;
 }
 
 #controls button {
   cursor: pointer;
-  /*display: inline-block;
-  float: left;*/
-  /*margin: 6px;*/
   width: 80px;
+}
+
+#controls .clear {
+  display: block;
+  clear: both;
 }
 
 .templates {
   display: none;
-}
-
-.tile.exclude {
-  visibility: hidden;
 }
 
 

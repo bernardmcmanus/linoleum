@@ -1,4 +1,4 @@
-/*! linoleum - 0.3.0 - Bernard McManus - nightly - g164822 - 2015-01-23 */
+/*! linoleum - 0.3.0 - Bernard McManus - nightly - g703e18 - 2015-01-26 */
 
 
 (function ( root , factory ) {
@@ -81,6 +81,9 @@ define('util',[], function() {
   return {
     notNull: function( subject ) {
       return subject !== null && typeof subject != 'undefined';
+    },
+    ensureArray: function( subject ) {
+      return (subject.jquery ? subject.toArray() : (Array.isArray( subject ) ? subject : [ subject ]));
     }
   };
 
@@ -230,7 +233,7 @@ define('tile',[ 'util' ], function( util ) {
       element.setAttribute( Linoleum.STICKY , that.sticky );
       element.setAttribute( Linoleum.INCLUDED , that.included );
       element.setAttribute( Linoleum.ENABLED , that.enabled );
-      return element;
+      return that;
     }
   };
 
@@ -269,18 +272,12 @@ define('grid',[ 'util' , 'tile' ] , function( util , Tile ) {
 
     that.rows = 0;
     that.cols = 0;
+    that.applied = {
+      /*sort: function() { return 0; },
+      filter: function() { return true; }*/
+    };
 
-    $(selector).toArray().map(function( element , i ) {
-      var tile = new Tile( element );
-      tile.index = util.notNull( tile.index ) ? tile.index : i;
-      return tile;
-    })
-    .sort(function( a , b ) {
-      return a.index - b.index;
-    })
-    .forEach(function( td ) {
-      that.push( td );
-    });
+    that.add( $(selector) );
 
     Object.defineProperties( that , {
       count: {
@@ -288,6 +285,27 @@ define('grid',[ 'util' , 'tile' ] , function( util , Tile ) {
           return that.get().length;
         }
       },
+      last: {
+        get: function() {
+          return that.get( true ).sort(function( a , b ) {
+            return a.index - b.index;
+          })
+          .pop();
+        }
+      },
+      /*current: {
+        get: function() {
+          var current = that.get();
+          var applied = that.applied;
+          if (applied.filter) {
+            current = current.filter( applied.filter );
+          }
+          if (applied.sort) {
+            current = current.sort( applied.sort );
+          }
+          return current;
+        }
+      },*/
       marginX: {
         get: function() {
           var margin = that.margin;
@@ -335,20 +353,68 @@ define('grid',[ 'util' , 'tile' ] , function( util , Tile ) {
 
     var proto = Object.create( Array.prototype );
 
+    proto.add = function( elements ) {
+
+      var that = this;
+      var last = that.last;
+      
+      util.ensureArray( elements ).map(function( element , i ) {
+        var tile = new Tile( element );
+        //tile.index = util.notNull( tile.index ) ? tile.index : (i + (last ? last.index : 0));
+        tile.index = (i + (last ? last.index : 0));
+        return tile;
+      })
+      .sort(function( a , b ) {
+        return a.index - b.index;
+      })
+      .forEach(function( tile ) {
+        that.push( tile );
+      });
+
+      return that._order();
+    };
+
+    proto.remove = function( elements ) {
+      elements = util.ensureArray( elements );
+      var that = this;
+      var swap = that.get( true ).filter(function( tile ) {
+        return elements.indexOf( tile.element ) < 0;
+      });
+      that._swap( swap ).forEach(function( tile , i ) {
+        tile.write({ index: i });
+      });
+      return that._order();
+    };
+
+    proto._order = function() {
+      var that = this;
+      var swap = that.get( true ).sort(function( a , b ) {
+        return a.index - b.index;
+      });
+      that._swap( swap ).forEach(function( tile , i ) {
+        tile.write({ index: i });
+      });
+      return that;
+    };
+
     proto.get = function( filters ) {
       
       var that = this;
-      
-      filters = $.extend( Tile.defaults , filters );
 
-      return that.filter(function( tile ) {
-        for (var key in filters) {
-          if (filters[key] !== tile[key]) {
-            return false;
+      if (filters === true) {
+        return that.slice( 0 );
+      }
+      else {
+        filters = $.extend( Tile.defaults , filters );
+        return that.filter(function( tile ) {
+          for (var key in filters) {
+            if (filters[key] !== tile[key]) {
+              return false;
+            }
           }
-        }
-        return true;
-      });
+          return true;
+        });
+      }
     };
 
     proto.elements = function( filters ) {
@@ -399,6 +465,9 @@ define('grid',[ 'util' , 'tile' ] , function( util , Tile ) {
       while (i < length) {
         that[i] = swap[i];
         i++;
+      }
+      if (swap.length < that.length) {
+        that.splice( swap.length , that.length );
       }
       return that;
     };
@@ -531,6 +600,9 @@ define('linoleum',[ 'util' , 'asap' , 'grid' ] , function( util , asap , Grid ) 
   var RESIZE = 'linoleum.resize';
   var SORT = 'linoleum.sort';
   var FILTER = 'linoleum.filter';
+  var ERROR = 'linoleum.error';
+  var ADD = 'linoleum.add';
+  var REMOVE = 'linoleum.remove';
 
 
   function Linoleum( selector , options ) {
@@ -676,7 +748,7 @@ define('linoleum',[ 'util' , 'asap' , 'grid' ] , function( util , asap , Grid ) 
         });
       })
       .catch(function( err ) {
-        console.error( err.stack );
+        that.$emit( ERROR , err );
       });
     },
 
@@ -692,7 +764,7 @@ define('linoleum',[ 'util' , 'asap' , 'grid' ] , function( util , asap , Grid ) 
         });
       })
       .catch(function( err ) {
-        console.error( err.stack );
+        that.$emit( ERROR , err );
       });
     },
 
@@ -708,7 +780,21 @@ define('linoleum',[ 'util' , 'asap' , 'grid' ] , function( util , asap , Grid ) 
         });
       })
       .catch(function( err ) {
-        console.error( err.stack );
+        that.$emit( ERROR , err );
+      });
+    },
+
+    add: function( elements ) {
+      var that = this;
+      that.$emit( ADD , [ elements ] , function( e ) {
+        that.grid.add( elements );
+      });
+    },
+
+    remove: function( elements ) {
+      var that = this;
+      that.$emit( REMOVE , [ elements ] , function( e ) {
+        that.grid.remove( elements );
       });
     }
 
