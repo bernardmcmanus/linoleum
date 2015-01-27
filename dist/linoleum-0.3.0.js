@@ -1,4 +1,4 @@
-/*! linoleum - 0.3.0 - Bernard McManus - nightly - g55cc0c - 2015-01-27 */
+/*! linoleum - 0.3.0 - Bernard McManus - nightly - g881525 - 2015-01-27 */
 
 
 (function ( root , factory ) {
@@ -440,10 +440,10 @@ define('grid',[ 'util' , 'tile' ], function( util , Tile ) {
       var tiles = that;
 
       if (filters !== true) {
-        filters = $.extend( Tile.defaults , filters );
+        filters = $.extend( Tile.defaults , { sticky: '*' } , filters );
         tiles = tiles.filter(function( tile ) {
           for (var key in filters) {
-            if (filters[key] !== tile[key]) {
+            if (filters[key] !== '*' && filters[key] !== tile[key]) {
               return false;
             }
           }
@@ -452,7 +452,9 @@ define('grid',[ 'util' , 'tile' ], function( util , Tile ) {
       }
 
       return tiles.sort(function( a , b ) {
-        return a.sort - b.sort;
+        var aIndex = a.sticky ? a.index + 1 : a.sort;
+        var bIndex = b.sticky ? b.index - 1 : b.sort;
+        return aIndex - bIndex;
       });
     };
 
@@ -469,7 +471,7 @@ define('grid',[ 'util' , 'tile' ], function( util , Tile ) {
       var sticky = that.get({ sticky: true });
       var include = that.filter( func );
       var exclude = util.inverse( that , include );
-      var swap = [].concat( sticky , include , exclude );
+      //var swap = [].concat( sticky , include , exclude );
 
       include.forEach(function( tile ) {
         tile.write({ excluded: false });
