@@ -1,7 +1,7 @@
 define([ 'util' ], function( util ) {
 
 
-  var PROPERTIES = [ 'index' , 'sort' , 'sticky' , 'included' , 'enabled' ];
+  var PROPERTIES = [ 'index' , 'sort' , 'sticky' , 'excluded' , 'disabled' ];
 
 
   function Tile( element ) {
@@ -12,7 +12,7 @@ define([ 'util' ], function( util ) {
 
     PROPERTIES.forEach(function( key ) {
       var cKey = key.toUpperCase();
-      var val = Linoleum._getAttr( element , Linoleum[cKey] );
+      var val = Linoleum.getAttr( element , Linoleum[cKey] );
       that[key] = util.notNull( val ) ? val : Tile.defaults[key];
     });
   }
@@ -23,8 +23,8 @@ define([ 'util' ], function( util ) {
       get: function() {
         return {
           sticky: false,
-          included: true,
-          enabled: true
+          excluded: false,
+          disabled: false
         };
       }
     }
@@ -47,8 +47,8 @@ define([ 'util' ], function( util ) {
       element.setAttribute( Linoleum.INDEX , that.index );
       element.setAttribute( Linoleum.SORT_INDEX , that.sort );
       element.setAttribute( Linoleum.STICKY , that.sticky );
-      element.setAttribute( Linoleum.INCLUDED , that.included );
-      element.setAttribute( Linoleum.ENABLED , that.enabled );
+      element.setAttribute( Linoleum.EXCLUDED , that.excluded );
+      element.setAttribute( Linoleum.DISABLED , that.disabled );
       return that;
     }
   };

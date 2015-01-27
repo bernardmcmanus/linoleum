@@ -1,4 +1,4 @@
-define([ 'util' , 'tile' ] , function( util , Tile ) {
+define([ 'util' , 'tile' ], function( util , Tile ) {
 
 
   function Grid( selector , options ) {
@@ -20,7 +20,6 @@ define([ 'util' , 'tile' ] , function( util , Tile ) {
       },
       last: {
         get: function() {
-          //return util.last( that );
           return that.slice( 0 ).sort(function( a , b ) {
             return a.index - b.index;
           })
@@ -77,7 +76,6 @@ define([ 'util' , 'tile' ] , function( util , Tile ) {
     proto.add = function( elements ) {
       var that = this;
       var last = that.last;
-      //debugger;
       util.ensureArray( elements ).forEach(function( element , i ) {
         that.push(
           new Tile( element ).init( i + ( last ? last.index : 0 ))
@@ -111,29 +109,6 @@ define([ 'util' , 'tile' ] , function( util , Tile ) {
       });
       return that;
     };
-
-    /*proto.get = function( filters ) {
-      
-      var that = this;
-
-      if (filters === true) {
-        return that.slice( 0 );
-      }
-      else {
-        filters = $.extend( Tile.defaults , filters );
-        return that.filter(function( tile ) {
-          for (var key in filters) {
-            if (filters[key] !== tile[key]) {
-              return false;
-            }
-          }
-          return true;
-        })
-        .sort(function( a , b ) {
-          return a.sort - b.sort;
-        });
-      }
-    };*/
 
     proto.get = function( filters ) {
       
@@ -173,11 +148,11 @@ define([ 'util' , 'tile' ] , function( util , Tile ) {
       var swap = [].concat( sticky , include , exclude );
 
       include.forEach(function( tile ) {
-        tile.write({ included: true });
+        tile.write({ excluded: false });
       });
 
       exclude.forEach(function( tile ) {
-        tile.write({ included: false });
+        tile.write({ excluded: true });
       });
       
       /*console.log('include',include);
@@ -236,6 +211,12 @@ define([ 'util' , 'tile' ] , function( util , Tile ) {
         duration: options.duration,
         easing: options.easing
       });
+    };
+
+    proto.nudge = function( options ) {
+      
+      var that = this;
+      
     };
 
     proto._buildLayout = function( container , force ) {

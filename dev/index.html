@@ -35,7 +35,7 @@
     <span class="clear"></span>
 
     <button id="filter">filter</button>
-    <input type="text" id="filter-input" value="0,1,3,4,5,7,9,11,13,15">
+    <input type="text" id="filter-input" value="0,1,3,4,5,7,9">
 
     <span class="clear"></span>
 
@@ -58,10 +58,16 @@
 
     <div class="tile">
       <div class="inner"></div>
+      <div class="controls">
+        <a href="#" data-method="sticky" data-alt="unstick" data-current="stick">stick</a>
+        <a href="#" data-method="excluded" data-alt="include" data-current="exclude">exclude</a>
+        <a href="#" data-method="disabled" data-alt="enable" data-current="disable">disable</a>
+      </div>
     </div>
 
   </div>
 
+  <script src="controls.js"></script>
   <script src="custom.js"></script>
 
 </body>

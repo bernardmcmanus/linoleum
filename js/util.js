@@ -26,13 +26,39 @@ define([], function() {
     return subject[( subject.length || 1 ) - 1 ];
   }
 
+  function getIndexes( elements ) {
+    return ensureArray( elements ).map(function( element ) {
+      return is( element , 'number' ) ? element : Linoleum.getAttr( element , Linoleum.INDEX );
+    });
+  }
+
   return {
     is: is,
     notNull: notNull,
     ensureArray: ensureArray,
     arrayCast: arrayCast,
     inverse: inverse,
-    last: last
+    last: last,
+    getIndexes: getIndexes
   };
 
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

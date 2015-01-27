@@ -41,16 +41,18 @@ body {
 {
   display: inline-block;
   float: left;
-  background-color: #000;
   border: none;
   margin: 6px;
   padding: 5px;
-  box-shadow: 0 0 0 2px #555;
+  background-color: #000;
+  border-radius: 5px;
   outline: 0;
+  -webkit-display: none;
 }
 
 #controls input[type=text] {
   width: 162px;
+  box-shadow: 0 0 0 1px #555;
 }
 
 #controls input[type=text].small {
@@ -60,6 +62,13 @@ body {
 #controls button {
   cursor: pointer;
   width: 80px;
+  box-shadow: 0 0 0 1px rgba(212,248,82,0.3);
+}
+
+#controls button:hover,
+#controls button:active {
+  background-color: #111;
+  box-shadow: 0 0 0 1px rgb(212,248,82);
 }
 
 #controls .clear {
@@ -70,6 +79,38 @@ body {
 .templates {
   display: none;
 }
+
+.tile .controls {
+  text-align: right;
+  font-size: 20px;
+  position: absolute;
+  right: 0;
+  top: 0;
+  padding: 5px;
+  line-height: 1.25;
+  display: none;
+}
+
+.tile:hover .controls {
+  display: block;
+}
+
+.tile:hover .inner {
+  opacity: 0.3;
+}
+
+.tile .controls a {
+  color: #fff;
+  text-decoration: none;
+  display: block;
+}
+
+.tile .controls a:hover {
+  text-decoration: underline;
+}
+
+
+
 
 
 

@@ -15,18 +15,22 @@
     /*border-radius: 50%;*/
   }
 
-  .tile.active {
-    z-index: 1;
-  }
-
-  .tile.sticky {
-    background-color: rgb(225,109,210);
-  }
-
   .tile .inner {
     position: relative;
     width: 100%;
     height: 100%;
+  }
+
+  .tile[data-linoleum-sticky=true] {
+    background-color: rgb(195,50,20);
+  }
+
+  .tile[data-linoleum-excluded=true] {
+    display: none;
+  }
+
+  .tile[data-linoleum-disabled=true] {
+    background-color: #58616c;
   }
 /*
 **  ---------------------------
