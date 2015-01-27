@@ -1,4 +1,4 @@
-/*! linoleum - 0.3.0 - Bernard McManus - nightly - gc3ec3c - 2015-01-26 */
+/*! linoleum - 0.3.0 - Bernard McManus - nightly - gbf0559 - 2015-01-26 */
 
 
 (function ( root , factory ) {
@@ -94,11 +94,23 @@ define('util',[], function() {
     return Array.prototype.slice.call( subject , 0 );
   }
 
+  function inverse( full , partial ) {
+    return full.filter(function( element ) {
+      return partial.indexOf( element ) < 0;
+    });
+  }
+
+  function last( subject ) {
+    return subject[( subject.length || 1 ) - 1 ];
+  }
+
   return {
     is: is,
     notNull: notNull,
     ensureArray: ensureArray,
-    arrayCast: arrayCast
+    arrayCast: arrayCast,
+    inverse: inverse,
+    last: last
   };
 
 });
@@ -207,7 +219,7 @@ define('asap',[], function() {
 define('tile',[ 'util' ], function( util ) {
 
 
-  var PROPERTIES = [ 'index' , 'sticky' , 'included' , 'enabled' ];
+  var PROPERTIES = [ 'index' , 'sort' , 'sticky' , 'included' , 'enabled' ];
 
 
   function Tile( element ) {
@@ -239,11 +251,19 @@ define('tile',[ 'util' ], function( util ) {
 
   Tile.prototype = {
 
+    init: function( index ) {
+      var that = this;
+      that.index = index;
+      that.sort = index;
+      return that;
+    },
+
     write: function( options ) {
       var that = this;
       var element = that.element;
       $.extend( that , options );
       element.setAttribute( Linoleum.INDEX , that.index );
+      element.setAttribute( Linoleum.SORT_INDEX , that.sort );
       element.setAttribute( Linoleum.STICKY , that.sticky );
       element.setAttribute( Linoleum.INCLUDED , that.included );
       element.setAttribute( Linoleum.ENABLED , that.enabled );
@@ -286,10 +306,6 @@ define('grid',[ 'util' , 'tile' ] , function( util , Tile ) {
 
     that.rows = 0;
     that.cols = 0;
-    that.applied = {
-      /*sort: function() { return 0; },
-      filter: function() { return true; }*/
-    };
 
     that.add( $(selector) );
 
@@ -301,25 +317,13 @@ define('grid',[ 'util' , 'tile' ] , function( util , Tile ) {
       },
       last: {
         get: function() {
-          return that.get( true ).sort(function( a , b ) {
+          //return util.last( that );
+          return that.slice( 0 ).sort(function( a , b ) {
             return a.index - b.index;
           })
           .pop();
         }
       },
-      /*current: {
-        get: function() {
-          var current = that.get();
-          var applied = that.applied;
-          if (applied.filter) {
-            current = current.filter( applied.filter );
-          }
-          if (applied.sort) {
-            current = current.sort( applied.sort );
-          }
-          return current;
-        }
-      },*/
       marginX: {
         get: function() {
           var margin = that.margin;
@@ -368,50 +372,44 @@ define('grid',[ 'util' , 'tile' ] , function( util , Tile ) {
     var proto = Object.create( Array.prototype );
 
     proto.add = function( elements ) {
-
       var that = this;
       var last = that.last;
-      
-      util.ensureArray( elements ).map(function( element , i ) {
-        var tile = new Tile( element );
-        //tile.index = util.notNull( tile.index ) ? tile.index : (i + (last ? last.index : 0));
-        tile.index = (i + (last ? last.index : 0));
-        return tile;
-      })
-      .sort(function( a , b ) {
-        return a.index - b.index;
-      })
-      .forEach(function( tile ) {
-        that.push( tile );
+      //debugger;
+      util.ensureArray( elements ).forEach(function( element , i ) {
+        that.push(
+          new Tile( element ).init( i + ( last ? last.index : 0 ))
+        );
       });
-
       return that._order();
     };
 
     proto.remove = function( elements ) {
-      elements = util.ensureArray( elements );
       var that = this;
-      var swap = that.get( true ).filter(function( tile ) {
-        return elements.indexOf( tile.element ) < 0;
+      var remove = util.ensureArray( elements );
+      var tiles = that.get( true ).filter(function( tile ) {
+        return remove.indexOf( tile.element ) < 0;
       });
-      that._swap( swap ).forEach(function( tile , i ) {
-        tile.write({ index: i });
-      });
-      return that._order();
+      return that._swap( tiles )._order();
     };
 
     proto._order = function() {
       var that = this;
-      var swap = that.get( true ).sort(function( a , b ) {
+      that.sort(function( a , b ) {
         return a.index - b.index;
-      });
-      that._swap( swap ).forEach(function( tile , i ) {
-        tile.write({ index: i });
+      })
+      .map(function( tile , i ) {
+        return tile.write({ index: i });
+      })
+      .sort(function( a , b ) {
+        return a.sort - b.sort;
+      })
+      .map(function( tile , i ) {
+        return tile.write({ sort: i });
       });
       return that;
     };
 
-    proto.get = function( filters ) {
+    /*proto.get = function( filters ) {
       
       var that = this;
 
@@ -427,8 +425,33 @@ define('grid',[ 'util' , 'tile' ] , function( util , Tile ) {
             }
           }
           return true;
+        })
+        .sort(function( a , b ) {
+          return a.sort - b.sort;
         });
       }
+    };*/
+
+    proto.get = function( filters ) {
+      
+      var that = this;
+      var tiles = that;
+
+      if (filters !== true) {
+        filters = $.extend( Tile.defaults , filters );
+        tiles = tiles.filter(function( tile ) {
+          for (var key in filters) {
+            if (filters[key] !== tile[key]) {
+              return false;
+            }
+          }
+          return true;
+        });
+      }
+
+      return tiles.sort(function( a , b ) {
+        return a.sort - b.sort;
+      });
     };
 
     proto.elements = function( filters ) {
@@ -438,19 +461,13 @@ define('grid',[ 'util' , 'tile' ] , function( util , Tile ) {
       });
     };
 
-    proto.inverse = function( subset ) {
-      var that = this;
-      return that.filter(function( tile ) {
-        return subset.indexOf( tile ) < 0;
-      });
-    };
-
     proto._filter = function( func ) {
 
       var that = this;
       var sticky = that.get({ sticky: true });
       var include = that.filter( func );
-      var exclude = that.inverse( include );
+      var exclude = util.inverse( that , include );
+      var swap = [].concat( sticky , include , exclude );
 
       include.forEach(function( tile ) {
         tile.write({ included: true });
@@ -460,28 +477,25 @@ define('grid',[ 'util' , 'tile' ] , function( util , Tile ) {
         tile.write({ included: false });
       });
       
-      console.log('include',include);
-      console.log('exclude',exclude);
+      /*console.log('include',include);
+      console.log('exclude',exclude);*/
 
       return that;
     };
 
     proto._sort = function( func ) {
       var that = this;
-      var tiles = that.get().sort( func );
-      return that._swap( tiles );
+      that.sort( func ).forEach(function( tile , i ) {
+        tile.write({ sort: i });
+      });
+      return that;
     };
 
     proto._swap = function( swap ) {
       var that = this;
-      var length = swap.length;
-      var i = 0;
-      while (i < length) {
-        that[i] = swap[i];
-        i++;
-      }
-      if (swap.length < that.length) {
-        that.splice( swap.length , that.length );
+      that.splice( 0 );
+      while (swap.length) {
+        that.push( swap.shift() );
       }
       return that;
     };
@@ -511,9 +525,7 @@ define('grid',[ 'util' , 'tile' ] , function( util , Tile ) {
         $(elements).hx( 'defer' , options.delay );
       }
 
-      return $(elements)
-      .hx()
-      .animate({
+      return $(elements).hx( options.method , {
         type: 'transform',
         translate: function( element , i ) {
           return layout[i];
@@ -623,6 +635,7 @@ define('linoleum',[ 'util' , 'asap' , 'grid' ] , function( util , asap , Grid ) 
 
     var that = this;
 
+    that.method = 'animate';
     that.duration = 400;
     that.delay = 200;
     that.easing = 'ease';
@@ -647,6 +660,7 @@ define('linoleum',[ 'util' , 'asap' , 'grid' ] , function( util , asap , Grid ) 
       distroOpts: {
         get: function() {
           return {
+            method: that.method,
             duration: that.duration,
             easing: that.easing,
             delay: that.delay,
@@ -681,6 +695,7 @@ define('linoleum',[ 'util' , 'asap' , 'grid' ] , function( util , asap , Grid ) 
     var val = subject.getAttribute( attr );
     switch (attr) {
       case Linoleum.INDEX:
+      case Linoleum.SORT_INDEX:
         return isNaN(parseInt( val , 10 )) ? null : parseInt( val , 10 );
       case Linoleum.STICKY:
       case Linoleum.INCLUDED:
@@ -693,6 +708,8 @@ define('linoleum',[ 'util' , 'asap' , 'grid' ] , function( util , asap , Grid ) 
 
 
   Linoleum.INDEX = Linoleum._defineAttr( 'index' );
+
+  Linoleum.SORT_INDEX = Linoleum._defineAttr( 'sort' );
 
   Linoleum.STICKY = Linoleum._defineAttr( 'sticky' );
 

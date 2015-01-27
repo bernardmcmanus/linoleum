@@ -34,7 +34,7 @@
 
 // ------------------------------------------------------- //
 
-  var linoleum = new Linoleum( '#container > .tile' , {
+  window.linoleum = new Linoleum( '#container > .tile' , {
     margin: 0
   })
   .$when( 'linoleum.error' , function( e , err ) {

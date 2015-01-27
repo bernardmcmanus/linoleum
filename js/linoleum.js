@@ -16,6 +16,7 @@ define([ 'util' , 'asap' , 'grid' ] , function( util , asap , Grid ) {
 
     var that = this;
 
+    that.method = 'animate';
     that.duration = 400;
     that.delay = 200;
     that.easing = 'ease';
@@ -40,6 +41,7 @@ define([ 'util' , 'asap' , 'grid' ] , function( util , asap , Grid ) {
       distroOpts: {
         get: function() {
           return {
+            method: that.method,
             duration: that.duration,
             easing: that.easing,
             delay: that.delay,
@@ -74,6 +76,7 @@ define([ 'util' , 'asap' , 'grid' ] , function( util , asap , Grid ) {
     var val = subject.getAttribute( attr );
     switch (attr) {
       case Linoleum.INDEX:
+      case Linoleum.SORT_INDEX:
         return isNaN(parseInt( val , 10 )) ? null : parseInt( val , 10 );
       case Linoleum.STICKY:
       case Linoleum.INCLUDED:
@@ -86,6 +89,8 @@ define([ 'util' , 'asap' , 'grid' ] , function( util , asap , Grid ) {
 
 
   Linoleum.INDEX = Linoleum._defineAttr( 'index' );
+
+  Linoleum.SORT_INDEX = Linoleum._defineAttr( 'sort' );
 
   Linoleum.STICKY = Linoleum._defineAttr( 'sticky' );
 

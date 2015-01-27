@@ -16,11 +16,23 @@ define([], function() {
     return Array.prototype.slice.call( subject , 0 );
   }
 
+  function inverse( full , partial ) {
+    return full.filter(function( element ) {
+      return partial.indexOf( element ) < 0;
+    });
+  }
+
+  function last( subject ) {
+    return subject[( subject.length || 1 ) - 1 ];
+  }
+
   return {
     is: is,
     notNull: notNull,
     ensureArray: ensureArray,
-    arrayCast: arrayCast
+    arrayCast: arrayCast,
+    inverse: inverse,
+    last: last
   };
 
 });

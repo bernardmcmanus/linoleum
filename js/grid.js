@@ -9,10 +9,6 @@ define([ 'util' , 'tile' ] , function( util , Tile ) {
 
     that.rows = 0;
     that.cols = 0;
-    that.applied = {
-      /*sort: function() { return 0; },
-      filter: function() { return true; }*/
-    };
 
     that.add( $(selector) );
 
@@ -24,25 +20,13 @@ define([ 'util' , 'tile' ] , function( util , Tile ) {
       },
       last: {
         get: function() {
-          return that.get( true ).sort(function( a , b ) {
+          //return util.last( that );
+          return that.slice( 0 ).sort(function( a , b ) {
             return a.index - b.index;
           })
           .pop();
         }
       },
-      /*current: {
-        get: function() {
-          var current = that.get();
-          var applied = that.applied;
-          if (applied.filter) {
-            current = current.filter( applied.filter );
-          }
-          if (applied.sort) {
-            current = current.sort( applied.sort );
-          }
-          return current;
-        }
-      },*/
       marginX: {
         get: function() {
           var margin = that.margin;
@@ -91,50 +75,44 @@ define([ 'util' , 'tile' ] , function( util , Tile ) {
     var proto = Object.create( Array.prototype );
 
     proto.add = function( elements ) {
-
       var that = this;
       var last = that.last;
-      
-      util.ensureArray( elements ).map(function( element , i ) {
-        var tile = new Tile( element );
-        //tile.index = util.notNull( tile.index ) ? tile.index : (i + (last ? last.index : 0));
-        tile.index = (i + (last ? last.index : 0));
-        return tile;
-      })
-      .sort(function( a , b ) {
-        return a.index - b.index;
-      })
-      .forEach(function( tile ) {
-        that.push( tile );
+      //debugger;
+      util.ensureArray( elements ).forEach(function( element , i ) {
+        that.push(
+          new Tile( element ).init( i + ( last ? last.index : 0 ))
+        );
       });
-
       return that._order();
     };
 
     proto.remove = function( elements ) {
-      elements = util.ensureArray( elements );
       var that = this;
-      var swap = that.get( true ).filter(function( tile ) {
-        return elements.indexOf( tile.element ) < 0;
+      var remove = util.ensureArray( elements );
+      var tiles = that.get( true ).filter(function( tile ) {
+        return remove.indexOf( tile.element ) < 0;
       });
-      that._swap( swap ).forEach(function( tile , i ) {
-        tile.write({ index: i });
-      });
-      return that._order();
+      return that._swap( tiles )._order();
     };
 
     proto._order = function() {
       var that = this;
-      var swap = that.get( true ).sort(function( a , b ) {
+      that.sort(function( a , b ) {
         return a.index - b.index;
-      });
-      that._swap( swap ).forEach(function( tile , i ) {
-        tile.write({ index: i });
+      })
+      .map(function( tile , i ) {
+        return tile.write({ index: i });
+      })
+      .sort(function( a , b ) {
+        return a.sort - b.sort;
+      })
+      .map(function( tile , i ) {
+        return tile.write({ sort: i });
       });
       return that;
     };
 
-    proto.get = function( filters ) {
+    /*proto.get = function( filters ) {
       
       var that = this;
 
@@ -150,8 +128,33 @@ define([ 'util' , 'tile' ] , function( util , Tile ) {
             }
           }
           return true;
+        })
+        .sort(function( a , b ) {
+          return a.sort - b.sort;
         });
       }
+    };*/
+
+    proto.get = function( filters ) {
+      
+      var that = this;
+      var tiles = that;
+
+      if (filters !== true) {
+        filters = $.extend( Tile.defaults , filters );
+        tiles = tiles.filter(function( tile ) {
+          for (var key in filters) {
+            if (filters[key] !== tile[key]) {
+              return false;
+            }
+          }
+          return true;
+        });
+      }
+
+      return tiles.sort(function( a , b ) {
+        return a.sort - b.sort;
+      });
     };
 
     proto.elements = function( filters ) {
@@ -161,19 +164,13 @@ define([ 'util' , 'tile' ] , function( util , Tile ) {
       });
     };
 
-    proto.inverse = function( subset ) {
-      var that = this;
-      return that.filter(function( tile ) {
-        return subset.indexOf( tile ) < 0;
-      });
-    };
-
     proto._filter = function( func ) {
 
       var that = this;
       var sticky = that.get({ sticky: true });
       var include = that.filter( func );
-      var exclude = that.inverse( include );
+      var exclude = util.inverse( that , include );
+      var swap = [].concat( sticky , include , exclude );
 
       include.forEach(function( tile ) {
         tile.write({ included: true });
@@ -183,28 +180,25 @@ define([ 'util' , 'tile' ] , function( util , Tile ) {
         tile.write({ included: false });
       });
       
-      console.log('include',include);
-      console.log('exclude',exclude);
+      /*console.log('include',include);
+      console.log('exclude',exclude);*/
 
       return that;
     };
 
     proto._sort = function( func ) {
       var that = this;
-      var tiles = that.get().sort( func );
-      return that._swap( tiles );
+      that.sort( func ).forEach(function( tile , i ) {
+        tile.write({ sort: i });
+      });
+      return that;
     };
 
     proto._swap = function( swap ) {
       var that = this;
-      var length = swap.length;
-      var i = 0;
-      while (i < length) {
-        that[i] = swap[i];
-        i++;
-      }
-      if (swap.length < that.length) {
-        that.splice( swap.length , that.length );
+      that.splice( 0 );
+      while (swap.length) {
+        that.push( swap.shift() );
       }
       return that;
     };
@@ -234,9 +228,7 @@ define([ 'util' , 'tile' ] , function( util , Tile ) {
         $(elements).hx( 'defer' , options.delay );
       }
 
-      return $(elements)
-      .hx()
-      .animate({
+      return $(elements).hx( options.method , {
         type: 'transform',
         translate: function( element , i ) {
           return layout[i];
