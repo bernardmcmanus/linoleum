@@ -32,6 +32,10 @@ define([], function() {
     });
   }
 
+  function bcr( subject ) {
+    return subject.getBoundingClientRect();
+  }
+
   return {
     is: is,
     notNull: notNull,
@@ -39,7 +43,8 @@ define([], function() {
     arrayCast: arrayCast,
     inverse: inverse,
     last: last,
-    getIndexes: getIndexes
+    getIndexes: getIndexes,
+    bcr: bcr
   };
 
 });

@@ -18,7 +18,7 @@ define([ 'util' , 'asap' , 'grid' ], function( util , asap , Grid ) {
     var that = this;
 
     that.method = 'animate';
-    that.duration = 400;
+    that.duration = 300;
     that.delay = 200;
     that.easing = 'ease';
     that.margin = buildMarginObject( 5 );
@@ -48,6 +48,11 @@ define([ 'util' , 'asap' , 'grid' ], function( util , asap , Grid ) {
             delay: that.delay,
             force: true
           };
+        }
+      },
+      elements: {
+        get: function() {
+          return that.grid.elements( true );
         }
       }/*,
       included: {
@@ -191,15 +196,15 @@ define([ 'util' , 'asap' , 'grid' ], function( util , asap , Grid ) {
         asap(function() {
           if (grid.resize( that.container , options.force )) {
             that.$emit( DISTRIBUTE , [ grid ] , function( e ) {
-              grid.distribute( options ).hx( 'done' , function() {
-                //resolve( true );
-              });
+              grid.distribute( options )/*.hx( 'done' , function() {
+                resolve( true );
+              })*/;
               resolve( true );
             });
           }
           else {
             that.$emit( NUDGE , [ grid ] , function( e ) {
-              grid.nudge();
+              grid.nudge( options );
               resolve( false );
             });
           }

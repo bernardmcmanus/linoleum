@@ -1,4 +1,4 @@
-/*! linoleum - 0.3.0 - Bernard McManus - nightly - g881525 - 2015-01-27 */
+/*! linoleum - 0.3.0 - Bernard McManus - nightly - g31302d - 2015-01-27 */
 
 
 (function ( root , factory ) {
@@ -110,6 +110,10 @@ define('util',[], function() {
     });
   }
 
+  function bcr( subject ) {
+    return subject.getBoundingClientRect();
+  }
+
   return {
     is: is,
     notNull: notNull,
@@ -117,7 +121,8 @@ define('util',[], function() {
     arrayCast: arrayCast,
     inverse: inverse,
     last: last,
-    getIndexes: getIndexes
+    getIndexes: getIndexes,
+    bcr: bcr
   };
 
 });
@@ -333,6 +338,9 @@ define('grid',[ 'util' , 'tile' ], function( util , Tile ) {
 
     that.rows = 0;
     that.cols = 0;
+    that.busy = false;
+    that.bcr = null;
+    that._layout = null;
 
     that.add( $(selector) );
 
@@ -342,12 +350,26 @@ define('grid',[ 'util' , 'tile' ], function( util , Tile ) {
           return that.get().length;
         }
       },
+      firstVisible: {
+        get: function() {
+          return $(that.elements()).filter( ':visible' ).get( 0 );
+        }
+      },
       last: {
         get: function() {
           return that.slice( 0 ).sort(function( a , b ) {
             return a.index - b.index;
           })
           .pop();
+        }
+      },
+      layout: {
+        get: function() {
+          return that._layout.map(function( coords ) {
+            delete coords.x;
+            coords.x = coords.x + that.offset;
+            return coords;
+          });
         }
       },
       marginX: {
@@ -364,10 +386,10 @@ define('grid',[ 'util' , 'tile' ], function( util , Tile ) {
       },
       iSize: {
         get: function() {
-          var elements = that.elements();
+          var bcr = util.bcr( that.firstVisible );
           return {
-            width: $(elements).outerWidth(),
-            height: $(elements).outerHeight()
+            width: bcr.width,
+            height: bcr.height
           };
         }
       },
@@ -387,6 +409,12 @@ define('grid',[ 'util' , 'tile' ], function( util , Tile ) {
             width: oSize.width * that.cols,
             height: oSize.height * that.rows
           };
+        }
+      },
+      offset: {
+        get: function() {
+          var bcr = that.bcr;
+          return bcr ? (bcr.width - that.size.width) / 2 : 0;
         }
       }
     });
@@ -437,7 +465,7 @@ define('grid',[ 'util' , 'tile' ], function( util , Tile ) {
     proto.get = function( filters ) {
       
       var that = this;
-      var tiles = that;
+      var normal = [], sticky = [], tiles = that;
 
       if (filters !== true) {
         filters = $.extend( Tile.defaults , { sticky: '*' } , filters );
@@ -450,6 +478,25 @@ define('grid',[ 'util' , 'tile' ], function( util , Tile ) {
           return true;
         });
       }
+
+      /*tiles.forEach(function( tile ) {
+        if (tile.sticky) {
+          sticky.push( tile );
+        }
+        else {
+          normal.push( tile );
+        }
+      });
+
+      normal = normal.sort(function( a , b ) {
+        return a.sort - b.sort;
+      });
+
+      sticky.forEach(function( tile ) {
+        normal.splice( tiles.indexOf( tile ) + 1 , 0 , tile );
+      });
+
+      return normal;*/
 
       return tiles.sort(function( a , b ) {
         var aIndex = a.sticky ? a.index + 1 : a.sort;
@@ -508,7 +555,9 @@ define('grid',[ 'util' , 'tile' ], function( util , Tile ) {
       var that = this;
       var layout = that._buildLayout( container , force );
       if (layout) {
-        that.layout = layout;
+        that._layout = layout.map(function( coords ) {
+          return Object.create( coords );
+        });
         return true;
       }
       return false;
@@ -520,6 +569,8 @@ define('grid',[ 'util' , 'tile' ], function( util , Tile ) {
       var elements = that.elements();
       var layout = that.layout;
 
+      that.busy = true;
+
       $(elements)
       .hx()
       .detach()
@@ -529,30 +580,66 @@ define('grid',[ 'util' , 'tile' ], function( util , Tile ) {
         $(elements).hx( 'defer' , options.delay );
       }
 
-      return $(elements).hx( options.method , {
+      return $(elements)
+      .hx( options.method , {
         type: 'transform',
         translate: function( element , i ) {
           return layout[i];
         },
         duration: options.duration,
         easing: options.easing
+      })
+      .then(function( resolve ) {
+        that.busy = false;
+        resolve();
       });
     };
 
     proto.nudge = function( options ) {
       
       var that = this;
-      
+      var elements = that.elements();
+      var layout;
+
+      if (that.busy) {
+        that.distribute($.extend( options , { delay: 0 }));
+      }
+      else {
+        layout = that.layout;
+        $(elements)
+        .hx()
+        .zero({
+          type: 'transform',
+          translate: function( element , i ) {
+            return layout[i];
+          }
+        });
+        /*$(elements)
+        .hx()
+        .update({
+          type: 'transform',
+          translate: function( element , i ) {
+            return layout[i];
+          }
+        })
+        .paint();*/
+      }
+
     };
 
     proto._buildLayout = function( container , force ) {
       
       var that = this;
-      var c = that._getCols( container );
+      var bcr = util.bcr( container );
+      var c = that._getCols( bcr.width );
       var r = that._getRows( c );
       var layout = [];
 
+      that.bcr = bcr;
+
       if (force || (c != that.cols || r != that.rows)) {
+        that.rows = r;
+        that.cols = c;
         for (var i = 0; i < r; i++) {
           for (var j = 0; j < c; j++) {
             layout.push({
@@ -561,8 +648,6 @@ define('grid',[ 'util' , 'tile' ], function( util , Tile ) {
             });
           }
         }
-        that.rows = r;
-        that.cols = c;
       }
       else {
         layout = false;
@@ -585,14 +670,21 @@ define('grid',[ 'util' , 'tile' ], function( util , Tile ) {
       return (iSize.height + that.marginY) * row + (that.marginY / 2);
     };
 
-    proto._getCols = function( container ) {
+    proto._getCols = function( width ) {
       var that = this;
       var count = that.count;
       var oSize = that.oSize;
-      var bcr = container.getBoundingClientRect();
-      var cols = Math.floor( bcr.width / oSize.width );
+      var cols = Math.floor( width / oSize.width );
       return cols <= count ? cols : count;
     };
+    /*proto._getCols = function( container ) {
+      var that = this;
+      var count = that.count;
+      var oSize = that.oSize;
+      var bcr = util.bcr( container );
+      var cols = Math.floor( bcr.width / oSize.width );
+      return cols <= count ? cols : count;
+    };*/
 
     proto._getRows = function( cols ) {
       var that = this;
@@ -647,7 +739,7 @@ define('linoleum',[ 'util' , 'asap' , 'grid' ], function( util , asap , Grid ) {
     var that = this;
 
     that.method = 'animate';
-    that.duration = 400;
+    that.duration = 300;
     that.delay = 200;
     that.easing = 'ease';
     that.margin = buildMarginObject( 5 );
@@ -677,6 +769,11 @@ define('linoleum',[ 'util' , 'asap' , 'grid' ], function( util , asap , Grid ) {
             delay: that.delay,
             force: true
           };
+        }
+      },
+      elements: {
+        get: function() {
+          return that.grid.elements( true );
         }
       }/*,
       included: {
@@ -820,15 +917,15 @@ define('linoleum',[ 'util' , 'asap' , 'grid' ], function( util , asap , Grid ) {
         asap(function() {
           if (grid.resize( that.container , options.force )) {
             that.$emit( DISTRIBUTE , [ grid ] , function( e ) {
-              grid.distribute( options ).hx( 'done' , function() {
-                //resolve( true );
-              });
+              grid.distribute( options )/*.hx( 'done' , function() {
+                resolve( true );
+              })*/;
               resolve( true );
             });
           }
           else {
             that.$emit( NUDGE , [ grid ] , function( e ) {
-              grid.nudge();
+              grid.nudge( options );
               resolve( false );
             });
           }

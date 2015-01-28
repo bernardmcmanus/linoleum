@@ -1,6 +1,6 @@
 (function() {
 
-  var tileCount = 12;
+  var tileCount = 30;
   var sortOrder = -1;
 
 // ------------------------------------------------------- //

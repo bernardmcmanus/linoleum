@@ -1,9 +1,10 @@
 window.linoleum = (function() {
 
 
-  var linoleum = new Linoleum( '#container > .tile' /*, {
-    margin: 0
-  }*/)
+  var linoleum = new Linoleum( '#container > .tile' , {
+    margin: 0,
+    //method: 'iterate'
+  })
   .$when( 'error' , function( e , err ) {
     console.error( err.stack );
   })
